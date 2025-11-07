@@ -1,0 +1,532 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Sistema de Farmácia{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li>Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Page Header -->
+    <div class="modern-page-header animate-fade-in-up">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="fas fa-tachometer-alt"></i>
+                Dashboard Principal
+                <span class="subtitle">Sistema Unificado de Controle Farmacêutico</span>
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'core:estoque' %}" class="btn-modern btn-primary">
+                    <i class="fas fa-cubes"></i>
+                    Estoque Completo
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas Críticos -->
+    {% if critical_alerts %}
+    <div class="alert-banner animate-fade-in-up">
+        {% for alert in critical_alerts %}
+        <div class="alert-item {{ alert.color }}">
+            <i class="{{ alert.icon }}"></i>
+            <div>
+                <h4>{{ alert.message }}</h4>
+                <p>Requer atenção imediata</p>
+            </div>
+            <a href="{% url 'core:unified_stock' %}?expiry_status={{ alert.type }}" class="alert-action">
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Métricas Principais -->
+    <div class="metrics-grid animate-fade-in-up">
+        <div class="metric-card branches">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-cubes"></i>
+                </div>
+                <div class="metric-title">Lotes Únicos</div>
+            </div>
+            <div class="metric-value">{{ total_batches }}</div>
+            <div class="metric-label">Total no Sistema</div>
+            <div class="metric-link">
+                <a href="{% url 'core:unified_stock' %}">Ver Todos</a>
+            </div>
+        </div>
+        
+        <div class="metric-card medications">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+                <div class="metric-title">Localizações</div>
+            </div>
+            <div class="metric-value">{{ total_locations }}</div>
+            <div class="metric-label">Ativas com Estoque</div>
+            <div class="metric-link">
+                <a href="{% url 'core:unified_stock' %}">Gerenciar</a>
+            </div>
+        </div>
+        
+        <div class="metric-card suppliers">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-pills"></i>
+                </div>
+                <div class="metric-title">Medicamentos</div>
+            </div>
+            <div class="metric-value">{{ total_medications }}</div>
+            <div class="metric-label">Cadastrados</div>
+            <div class="metric-link">
+                <a href="{% url 'inventory:medication_list' %}">Ver Lista</a>
+            </div>
+        </div>
+        
+        <div class="metric-card transfers">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="metric-title">Filiais</div>
+            </div>
+            <div class="metric-value">{{ total_branches }}</div>
+            <div class="metric-label">Ativas</div>
+            <div class="metric-link">
+                <a href="{% url 'branches:dashboard' %}">Gerenciar</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status de Vencimento -->
+    <div class="modern-grid grid-cols-1 lg:grid-cols-2 mb-6">
+        <div class="content-card">
+            <div class="card-header">
+                <h3><i class="fas fa-chart-pie"></i> Status de Vencimento</h3>
+            </div>
+            <div class="card-body">
+                <div class="expiry-stats">
+                    <div class="stat-item normal">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ normal_count }}</div>
+                            <div class="stat-label">Lotes Normais</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-item warning">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ near_expiry_count }}</div>
+                            <div class="stat-label">Próximo Vencimento</div>
+                        </div>
+                        <a href="{% url 'core:unified_stock' %}?expiry_status=near_expiry" class="stat-link">
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="stat-item danger">
+                        <div class="stat-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value">{{ expired_count }}</div>
+                            <div class="stat-label">Vencidos</div>
+                        </div>
+                        <a href="{% url 'core:unified_stock' %}?expiry_status=expired" class="stat-link">
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-header">
+                <h3><i class="fas fa-warehouse"></i> Resumo do Estoque</h3>
+            </div>
+            <div class="card-body">
+                <div class="stock-summary">
+                    <div class="summary-item">
+                        <div class="summary-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="summary-content">
+                            <div class="summary-value">{{ total_quantity }}</div>
+                            <div class="summary-label">Unidades Totais</div>
+                        </div>
+                    </div>
+                    
+                    <div class="summary-actions">
+                        <a href="{% url 'core:complete_stock' %}" class="btn-modern btn-outline">
+                            <i class="fas fa-eye"></i>
+                            Ver Estoque Completo
+                        </a>
+                        <a href="{% url 'core:consistency_report' %}" class="btn-modern btn-outline">
+                            <i class="fas fa-clipboard-check"></i>
+                            Relatório de Consistência
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ações Rápidas -->
+    <div class="content-card">
+        <div class="card-header">
+            <h3><i class="fas fa-bolt"></i> Ações Rápidas</h3>
+        </div>
+        <div class="card-body">
+            <div class="quick-actions-grid">
+                <a href="{% url 'core:estoque' %}" class="quick-action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Estoque</h4>
+                        <p>Vista consolidada de todos os lotes</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'inventory:medication_list' %}" class="quick-action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-pills"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Medicamentos</h4>
+                        <p>Gerenciar catálogo de medicamentos</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'branches:dashboard' %}" class="quick-action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Filiais</h4>
+                        <p>Controlar estoques por filial</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'suppliers:supplier_list' %}" class="quick-action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Fornecedores</h4>
+                        <p>Gerenciar fornecedores e compras</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'reports:report_list' %}" class="quick-action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Relatórios</h4>
+                        <p>Análises e relatórios do sistema</p>
+                    </div>
+                </a>
+                
+                <a href="{% url 'core:system_integrity' %}" class="quick-action-card">
+                    <div class="action-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <div class="action-content">
+                        <h4>Integridade</h4>
+                        <p>Verificar consistência dos dados</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos específicos para o dashboard */
+.subtitle {
+    font-size: 0.875rem;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-left: 1rem;
+}
+
+.alert-banner {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border-left: 4px solid;
+    flex: 1;
+    position: relative;
+}
+
+.alert-item.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #EF4444;
+    color: #DC2626;
+}
+
+.alert-item.warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #F59E0B;
+    color: #D97706;
+}
+
+.alert-item i {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.alert-item h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.alert-item p {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.alert-action {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: inherit;
+    opacity: 0.7;
+    transition: opacity var(--transition-base);
+}
+
+.alert-action:hover {
+    opacity: 1;
+}
+
+.metric-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    opacity: 0.9;
+}
+
+.metric-link {
+    margin-top: 0.5rem;
+}
+
+.metric-link a {
+    color: white;
+    font-size: 0.75rem;
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity var(--transition-base);
+}
+
+.metric-link a:hover {
+    opacity: 1;
+}
+
+.expiry-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border-left: 4px solid;
+    position: relative;
+}
+
+.stat-item.normal {
+    background: rgba(16, 185, 129, 0.1);
+    border-left-color: #10B981;
+}
+
+.stat-item.warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #F59E0B;
+}
+
+.stat-item.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #EF4444;
+}
+
+.stat-icon i {
+    font-size: 1.5rem;
+    color: var(--neutral-600);
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--neutral-900);
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--neutral-600);
+}
+
+.stat-link {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--neutral-600);
+    transition: color var(--transition-base);
+}
+
+.stat-link:hover {
+    color: var(--neutral-900);
+}
+
+.stock-summary {
+    text-align: center;
+}
+
+.summary-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: var(--neutral-50);
+    border-radius: var(--radius-md);
+}
+
+.summary-icon i {
+    font-size: 2rem;
+    color: var(--primary-blue);
+}
+
+.summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--neutral-900);
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: var(--neutral-600);
+}
+
+.summary-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.quick-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.quick-action-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: white;
+    border: 1px solid var(--neutral-200);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: inherit;
+    transition: all var(--transition-base);
+}
+
+.quick-action-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    border-color: var(--primary-blue);
+}
+
+.action-icon {
+    flex-shrink: 0;
+    width: 3rem;
+    height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-blue);
+    color: white;
+    border-radius: var(--radius-full);
+}
+
+.action-icon i {
+    font-size: 1.25rem;
+}
+
+.action-content h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.action-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--neutral-600);
+}
+
+@media (max-width: 768px) {
+    .alert-banner {
+        flex-direction: column;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .quick-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .summary-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+{% block extra_js %}
+<script src="{% static 'js/modern-dashboard.js' %}"></script>
+{% endblock %}
+{% endblock %}

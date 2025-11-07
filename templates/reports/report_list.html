@@ -1,0 +1,770 @@
+{% extends 'base.html' %}
+
+{% block title %}Relatórios - Sistema de Farmácia{% endblock %}
+
+{% block nav_reports %}active{% endblock %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+<style>
+/* Estilos específicos para relatórios modernos */
+.reports-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: var(--radius-lg);
+}
+
+.reports-header .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.reports-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.reports-header .subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+}
+
+.status-indicator.online {
+    background: rgba(16, 185, 129, 0.2);
+}
+
+.status-indicator.offline {
+    background: rgba(239, 68, 68, 0.2);
+}
+
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.report-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--neutral-200);
+}
+
+.report-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(45deg, transparent 60%, rgba(255,255,255,0.1));
+    transform: translateX(50%) translateY(-50%) rotate(45deg);
+}
+
+.report-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.report-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.report-icon {
+    width: 4rem;
+    height: 4rem;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.report-icon.stock { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); }
+.report-icon.movements { background: linear-gradient(135deg, #10B981 0%, #059669 100%); }
+.report-icon.expiration { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); }
+
+.report-info h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--neutral-900);
+    margin: 0;
+}
+
+.report-description {
+    color: var(--neutral-600);
+    font-size: 0.875rem;
+    margin: 0.5rem 0 1.5rem 0;
+    line-height: 1.5;
+}
+
+.report-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: auto;
+}
+
+.btn-generate {
+    flex: 1;
+    background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-generate:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.btn-generate:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-generate.loading {
+    color: transparent;
+}
+
+.btn-generate .loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid transparent;
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: none;
+}
+
+.btn-generate.loading .loading-spinner {
+    display: block;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-md);
+    color: white;
+    font-weight: 600;
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+}
+
+.history-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--neutral-200);
+}
+
+.section-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--neutral-200);
+    background: var(--neutral-50);
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--neutral-900);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .reports-header .header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .report-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'reports:report_list' %}">Relatórios</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Header Moderno -->
+    <div class="reports-header animate-fade-in-up">
+        <div class="header-content">
+            <div>
+                <h1>
+                    <i class="fas fa-chart-bar"></i>
+                    Sistema de Relatórios
+                </h1>
+                <p class="subtitle">Gere relatórios detalhados em PDF com dados consolidados</p>
+            </div>
+            <div class="status-indicator online" id="pdf-status">
+                <div class="status-dot"></div>
+                <span>Sistema Online</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Relatórios -->
+    <div class="reports-grid animate-fade-in-up">
+        <div class="report-card">
+            <div class="report-header">
+                <div class="report-icon stock">
+                    <i class="fas fa-boxes"></i>
+                </div>
+                <div class="report-info">
+                    <h3>Relatório de Estoque</h3>
+                </div>
+            </div>
+            <p class="report-description">
+                Situação completa de todos os medicamentos em estoque com métricas consolidadas, 
+                status de vencimento e alertas de estoque baixo.
+            </p>
+            <div class="report-actions">
+                <button class="btn-generate" onclick="generateReport('stock')" id="btn-stock">
+                    <span class="btn-text">
+                        <i class="fas fa-download"></i>
+                        Gerar PDF
+                    </span>
+                    <div class="loading-spinner"></div>
+                </button>
+            </div>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-header">
+                <div class="report-icon movements">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="report-info">
+                    <h3>Relatório de Movimentações</h3>
+                </div>
+            </div>
+            <p class="report-description">
+                Histórico detalhado de todas as transferências e movimentações 
+                dos últimos 30 dias entre filiais e estoque geral.
+            </p>
+            <div class="report-actions">
+                <button class="btn-generate" onclick="generateReport('movements')" id="btn-movements">
+                    <span class="btn-text">
+                        <i class="fas fa-download"></i>
+                        Gerar PDF
+                    </span>
+                    <div class="loading-spinner"></div>
+                </button>
+            </div>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-header">
+                <div class="report-icon expiration">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="report-info">
+                    <h3>Relatório de Vencimentos</h3>
+                </div>
+            </div>
+            <p class="report-description">
+                Análise completa de lotes vencidos e próximos ao vencimento, 
+                com recomendações e níveis de urgência para ação.
+            </p>
+            <div class="report-actions">
+                <button class="btn-generate" onclick="generateReport('expiration')" id="btn-expiration">
+                    <span class="btn-text">
+                        <i class="fas fa-download"></i>
+                        Gerar PDF
+                    </span>
+                    <div class="loading-spinner"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+<!-- Histórico de Relatórios -->
+<div class="content-card">
+    <div class="card">
+        <div class="card-header">
+            <h3>Histórico de Relatórios</h3>
+        </div>
+        
+        <div class="card-body">
+            {% if reports %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Gerado por</th>
+                                <th>Data</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in reports %}
+                            <tr>
+                                <td>
+                                    <strong>{{ report.title }}</strong>
+                                    <small class="d-block">{{ report.description|default:"" }}</small>
+                                </td>
+                                <td>
+                                    <span class="report-type {{ report.report_type }}">
+                                        {% if report.report_type == 'estoque' %}
+                                            <i class="fas fa-boxes"></i>
+                                            Estoque
+                                        {% elif report.report_type == 'movimentacao' %}
+                                            <i class="fas fa-exchange-alt"></i>
+                                            Movimentação
+                                        {% elif report.report_type == 'vencimento' %}
+                                            <i class="fas fa-calendar-times"></i>
+                                            Vencimento
+                                        {% else %}
+                                            {{ report.get_report_type_display }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ report.generated_by.get_full_name|default:report.generated_by.username }}</td>
+                                <td>{{ report.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'reports:report_detail' report.pk %}" class="btn btn-sm btn-outline">
+                                            <i class="fas fa-eye"></i>
+                                            Ver
+                                        </a>
+                                        {% if report.file_path %}
+                                        <a href="{% url 'reports:report_download' report.pk %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-download"></i>
+                                            Download
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>Nenhum relatório gerado</h3>
+                    <p>Comece gerando seu primeiro relatório usando as opções acima.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+    <!-- Histórico de Relatórios -->
+    <div class="history-section animate-fade-in-up">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-history"></i>
+                Histórico de Relatórios
+            </h2>
+        </div>
+        
+        <div class="card-body">
+            {% if reports %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Título</th>
+                                <th>Tipo</th>
+                                <th>Gerado por</th>
+                                <th>Data</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for report in reports %}
+                            <tr>
+                                <td>
+                                    <strong>{{ report.title }}</strong>
+                                    <small class="d-block">{{ report.description|default:"" }}</small>
+                                </td>
+                                <td>
+                                    <span class="report-type {{ report.report_type }}">
+                                        {% if report.report_type == 'stock' %}
+                                            <i class="fas fa-boxes"></i>
+                                            Estoque
+                                        {% elif report.report_type == 'movements' %}
+                                            <i class="fas fa-exchange-alt"></i>
+                                            Movimentação
+                                        {% elif report.report_type == 'expiration' %}
+                                            <i class="fas fa-calendar-times"></i>
+                                            Vencimento
+                                        {% else %}
+                                            {{ report.get_report_type_display }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ report.generated_by.get_full_name|default:report.generated_by.username }}</td>
+                                <td>{{ report.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'reports:report_detail' report.pk %}" class="btn btn-sm btn-outline">
+                                            <i class="fas fa-eye"></i>
+                                            Ver
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>Nenhum relatório gerado</h3>
+                    <p>Comece gerando seu primeiro relatório usando as opções acima.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Container para notificações -->
+<div id="notification-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/modern-dashboard.js' %}"></script>
+<script>
+/**
+ * Sistema de Geração de Relatórios - Frontend Robusto
+ */
+class ReportGenerator {
+    constructor() {
+        this.endpoints = {
+            stock: "{% url 'reports:stock_report_pdf' %}",
+            movements: "{% url 'reports:movements_report_pdf' %}",
+            expiration: "{% url 'reports:expiration_report_pdf' %}",
+            status: "{% url 'reports:pdf_status_check' %}"
+        };
+        this.init();
+    }
+    
+    init() {
+        // Verificar status do sistema PDF
+        this.checkPDFStatus();
+        
+        // Configurar CSRF token
+        this.csrfToken = this.getCookie('csrftoken');
+        
+        // Aplicar animações aos cards
+        this.initAnimations();
+        
+        console.log('🔧 Sistema de Relatórios inicializado');
+    }
+    
+    async checkPDFStatus() {
+        try {
+            const response = await fetch(this.endpoints.status);
+            const status = await response.json();
+            
+            const indicator = document.getElementById('pdf-status');
+            
+            if (status.engine_available) {
+                indicator.className = 'status-indicator online';
+                indicator.innerHTML = `
+                    <div class="status-dot"></div>
+                    <span>${status.engine_name}</span>
+                `;
+            } else {
+                indicator.className = 'status-indicator offline';
+                indicator.innerHTML = `
+                    <div class="status-dot"></div>
+                    <span>Sistema Offline</span>
+                `;
+                
+                // Desabilitar todos os botões se sistema offline
+                document.querySelectorAll('.btn-generate').forEach(btn => {
+                    btn.disabled = true;
+                    btn.title = 'Sistema de PDF indisponível';
+                });
+            }
+        } catch (error) {
+            console.warn('❌ Erro ao verificar status do PDF:', error);
+            const indicator = document.getElementById('pdf-status');
+            indicator.className = 'status-indicator offline';
+            indicator.innerHTML = `
+                <div class="status-dot"></div>
+                <span>Status Desconhecido</span>
+            `;
+        }
+    }
+    
+    async generateReport(type) {
+        const button = document.getElementById(`btn-${type}`);
+        const originalContent = button.innerHTML;
+        
+        try {
+            // UI: Loading state
+            this.setButtonLoading(button, true);
+            
+            // Fazer requisição
+            const response = await fetch(this.endpoints[type], {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': this.csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            // Verificar se é realmente um PDF
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/pdf')) {
+                // Se não for PDF, pode ser redirect para página de erro
+                const text = await response.text();
+                console.warn('⚠️ Resposta não é PDF:', text);
+                throw new Error('Resposta inválida do servidor');
+            }
+            
+            // Download do arquivo
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            
+            // Criar link de download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = this.getFileName(type);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            // Feedback de sucesso
+            this.showNotification('✅ Relatório gerado com sucesso!', 'success');
+            
+            // Atualizar histórico (se necessário)
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            
+        } catch (error) {
+            console.error(`❌ Erro na geração do relatório ${type}:`, error);
+            
+            let errorMessage = 'Erro inesperado ao gerar relatório';
+            if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Erro de conexão. Verifique sua internet.';
+            } else if (error.message.includes('HTTP 500')) {
+                errorMessage = 'Erro interno do servidor. Tente novamente.';
+            } else if (error.message.includes('HTTP 403')) {
+                errorMessage = 'Acesso negado. Verifique suas permissões.';
+            }
+            
+            this.showNotification(`❌ ${errorMessage}`, 'error');
+            
+        } finally {
+            // Resetar botão
+            this.setButtonLoading(button, false);
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+            }, 100);
+        }
+    }
+    
+    setButtonLoading(button, loading) {
+        if (loading) {
+            button.classList.add('loading');
+            button.disabled = true;
+            const spinner = button.querySelector('.loading-spinner');
+            if (spinner) spinner.style.display = 'block';
+        } else {
+            button.classList.remove('loading');
+            button.disabled = false;
+            const spinner = button.querySelector('.loading-spinner');
+            if (spinner) spinner.style.display = 'none';
+        }
+    }
+    
+    getFileName(type) {
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+        const names = {
+            stock: 'relatorio_estoque',
+            movements: 'relatorio_movimentacoes',
+            expiration: 'relatorio_vencimentos'
+        };
+        return `${names[type]}_${timestamp}.pdf`;
+    }
+    
+    showNotification(message, type = 'info') {
+        // Remover notificações existentes
+        const existing = document.querySelectorAll('.notification');
+        existing.forEach(n => n.remove());
+        
+        // Criar nova notificação
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        // Adicionar ao container
+        const container = document.getElementById('notification-container') || document.body;
+        container.appendChild(notification);
+        
+        // Animar entrada
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        // Auto-remover
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 4000);
+    }
+    
+    getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    initAnimations() {
+        // Animar cards ao carregar
+        const cards = document.querySelectorAll('.report-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate-fade-in-up');
+        });
+    }
+}
+
+// Função global para os botões
+function generateReport(type) {
+    if (window.reportGenerator) {
+        window.reportGenerator.generateReport(type);
+    } else {
+        console.error('❌ Sistema de relatórios não inicializado');
+    }
+}
+
+// Inicializar quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    window.reportGenerator = new ReportGenerator();
+    
+    // Inicializar animações do dashboard se disponível
+    if (typeof DashboardModerno !== 'undefined') {
+        DashboardModerno.init();
+    }
+    
+    console.log('🚀 Interface de relatórios carregada');
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl+1, Ctrl+2, Ctrl+3 para gerar relatórios
+    if (e.ctrlKey) {
+        switch(e.key) {
+            case '1':
+                e.preventDefault();
+                generateReport('stock');
+                break;
+            case '2':
+                e.preventDefault();
+                generateReport('movements');
+                break;
+            case '3':
+                e.preventDefault();
+                generateReport('expiration');
+                break;
+        }
+    }
+});
+</script>
+{% endblock %}

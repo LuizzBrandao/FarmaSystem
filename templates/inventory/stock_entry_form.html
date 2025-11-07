@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}Entrada de Estoque - Sistema de Farmácia{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'inventory:stock_list' %}">Estoque</a></li>
+<li>Entrada</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-boxes"></i>
+        Entrada de Estoque
+    </h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Medicamento</label>
+                <select name="medication" class="form-control" required>
+                    <option value="">Selecione um medicamento</option>
+                    {% for medication in medications %}
+                    <option value="{{ medication.pk }}">{{ medication.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Quantidade</label>
+                        <input type="number" name="quantity" class="form-control" required min="1">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Número do Lote</label>
+                        <input type="text" name="batch_number" class="form-control" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Data de Validade</label>
+                        <input type="date" name="expiry_date" class="form-control" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Fornecedor</label>
+                        <select name="supplier" class="form-control">
+                            <option value="">Selecione um fornecedor</option>
+                            {% for supplier in suppliers %}
+                            <option value="{{ supplier.pk }}">{{ supplier.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Preço de Compra</label>
+                        <input type="number" name="purchase_price" class="form-control" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Preço de Venda</label>
+                        <input type="number" name="selling_price" class="form-control" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Registrar Entrada
+                </button>
+                <a href="{% url 'inventory:stock_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

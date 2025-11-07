@@ -1,0 +1,530 @@
+{% extends 'base.html' %}
+
+{% block title %}Estoque - {{ branch.name }} - Sistema de Farmácia{% endblock %}
+
+{% block nav_branches %}active{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'branches:dashboard' %}">Filiais</a></li>
+<li><a href="{% url 'branches:branch_detail' branch.pk %}">{{ branch.name }}</a></li>
+<li>Estoque</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <i class="fas fa-boxes"></i>
+            Estoque - {{ branch.name }}
+        </h1>
+        <div class="header-actions">
+            <a href="{% url 'branches:create_transfer' %}?from_branch={{ branch.pk }}" class="btn btn-primary">
+                <i class="fas fa-exchange-alt"></i>
+                Nova Transferência
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="card">
+        <div class="card-header">
+            <h3>Medicamentos em Estoque</h3>
+            <div class="search-filters">
+                <form method="get" class="filter-form">
+                    <div class="filter-group">
+                        <input type="text" name="search" value="{{ search }}" placeholder="Buscar medicamentos..." class="form-control">
+                        
+                        <select name="category" class="form-control">
+                            <option value="">Todas as categorias</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        
+                        <select name="expiry_status" class="form-control">
+                            {% for value, label in expiry_status_choices %}
+                            <option value="{{ value }}" {% if value == expiry_status %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="low_stock" value="true" {% if low_stock_only %}checked{% endif %}>
+                            Apenas estoque baixo
+                        </label>
+                        
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-filter"></i>
+                            Filtrar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if stocks %}
+                <div class="stock-table-wrapper">
+                    <table class="stock-table">
+                        <thead>
+                            <tr>
+                                <th>Medicamento</th>
+                                <th>Categoria</th>
+                                <th>Estoque Total</th>
+                                <th>Reservado</th>
+                                <th>Disponível</th>
+                                <th>Mínimo</th>
+                                <th>Vencimento</th>
+                                <th>Lotes</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in stocks %}
+                            <tr class="stock-row {% if stock.is_low_stock %}low-stock{% endif %} {% if stock.has_expiry_issues %}expiry-issues{% endif %} {{ stock.expiry_status_class }}">
+                                <td>
+                                    <div class="medication-info">
+                                        <h4>{{ stock.medication.name }}</h4>
+                                        <p>{{ stock.medication.dosage }}</p>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="category-badge">{{ stock.medication.category.name }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ stock.quantity }}</strong>
+                                </td>
+                                <td>
+                                    {% if stock.reserved_quantity > 0 %}
+                                        <span class="reserved">{{ stock.reserved_quantity }}</span>
+                                    {% else %}
+                                        <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong class="{% if stock.available_quantity <= stock.medication.minimum_stock %}text-warning{% endif %}">
+                                        {{ stock.available_quantity }}
+                                    </strong>
+                                </td>
+                                <td>
+                                    {{ stock.medication.minimum_stock }}
+                                </td>
+                                <td>
+                                    <!-- Status de Vencimento -->
+                                    {% if stock.expiry_status == 'expired' %}
+                                        <span class="status-badge status-expired">
+                                            <i class="fas fa-times-circle"></i>
+                                            Vencido
+                                        </span>
+                                    {% elif stock.expiry_status == 'near_expiry' %}
+                                        <span class="status-badge status-near-expiry">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Próximo Vencimento
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-normal">
+                                            <i class="fas fa-check-circle"></i>
+                                            Normal
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <!-- Informações de Lotes -->
+                                    <div class="batch-info">
+                                        <span class="total-batches">{{ stock.total_batches }} lotes</span>
+                                        {% if stock.expired_batches_count > 0 %}
+                                            <span class="expired-count">{{ stock.expired_batches_count }} vencidos</span>
+                                        {% endif %}
+                                        {% if stock.near_expiry_batches_count > 0 %}
+                                            <span class="near-expiry-count">{{ stock.near_expiry_batches_count }} próximos</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if stock.is_low_stock %}
+                                        <span class="status-badge warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Estoque Baixo
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge success">
+                                            <i class="fas fa-check-circle"></i>
+                                            OK
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'branches:medication_batches_detail' branch.pk stock.pk %}" class="btn btn-sm btn-outline-info" title="Ver Lotes">
+                                            <i class="fas fa-pills"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="updateStock({{ stock.pk }}, '{{ stock.medication.name }}', {{ stock.quantity }})" title="Atualizar Estoque">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <a href="{% url 'branches:create_transfer' %}?from_branch={{ branch.pk }}&medication={{ stock.medication.pk }}" class="btn btn-sm btn-outline-secondary" title="Transferir">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-boxes"></i>
+                    <h4>Nenhum medicamento encontrado</h4>
+                    <p>Não há medicamentos em estoque para esta filial ou filtros aplicados.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Atualizar Estoque -->
+<div class="modal" id="updateStockModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-edit"></i> Atualizar Estoque</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="updateStockForm" method="post">
+            {% csrf_token %}
+            <div class="modal-body">
+                <input type="hidden" id="stockId" name="stock_id">
+                
+                <div class="form-group">
+                    <label for="medicationName">Medicamento:</label>
+                    <input type="text" id="medicationName" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="currentQuantity">Quantidade Atual:</label>
+                    <input type="number" id="currentQuantity" class="form-control" readonly>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newQuantity">Nova Quantidade:</label>
+                    <input type="number" id="newQuantity" name="quantity" class="form-control" min="0" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reason">Motivo da Alteração:</label>
+                    <textarea id="reason" name="reason" class="form-control" rows="3" placeholder="Descreva o motivo da alteração no estoque..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Salvar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.filter-form {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.filter-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.stock-table-wrapper {
+    overflow-x: auto;
+}
+
+.stock-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.stock-table th,
+.stock-table td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.stock-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.stock-row.low-stock {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 4px solid var(--warning-color);
+}
+
+/* Status de Vencimento */
+.stock-row.status-expired {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 4px solid #EF4444;
+}
+
+.stock-row.status-near-expiry {
+    background: rgba(245, 158, 11, 0.1);
+    border-left: 4px solid #F59E0B;
+}
+
+.stock-row.status-normal {
+    border-left: 4px solid #10B981;
+}
+
+.stock-row.expiry-issues {
+    position: relative;
+}
+
+.stock-row.expiry-issues::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 20px 20px 0;
+    border-color: transparent #EF4444 transparent transparent;
+}
+
+/* Status Badges */
+.status-badge.status-expired {
+    background: #EF4444;
+    color: white;
+}
+
+.status-badge.status-near-expiry {
+    background: #F59E0B;
+    color: white;
+}
+
+.status-badge.status-normal {
+    background: #10B981;
+    color: white;
+}
+
+/* Informações de Lotes */
+.batch-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.total-batches {
+    font-weight: 600;
+    color: var(--neutral-700);
+}
+
+.expired-count {
+    color: #EF4444;
+    font-weight: 600;
+}
+
+.near-expiry-count {
+    color: #F59E0B;
+    font-weight: 600;
+}
+
+.medication-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+}
+
+.medication-info p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.category-badge {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.reserved {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.success {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-badge.warning {
+    background: var(--warning-color);
+    color: white;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h3 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--gray-500);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+@media (max-width: 768px) {
+    .filter-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function updateStock(stockId, medicationName, currentQuantity) {
+    document.getElementById('stockId').value = stockId;
+    document.getElementById('medicationName').value = medicationName;
+    document.getElementById('currentQuantity').value = currentQuantity;
+    document.getElementById('newQuantity').value = currentQuantity;
+    document.getElementById('updateStockModal').classList.add('show');
+}
+
+function closeModal() {
+    document.getElementById('updateStockModal').classList.remove('show');
+}
+
+// Atualizar action do form com o stock ID
+document.getElementById('updateStockForm').addEventListener('submit', function(e) {
+    const stockId = document.getElementById('stockId').value;
+    this.action = `{% url 'branches:update_stock' branch.pk 0 %}`.replace('0', stockId);
+});
+
+// Fechar modal ao clicar fora
+document.getElementById('updateStockModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+</script>
+{% endblock %}

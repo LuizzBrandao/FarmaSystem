@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Farmácia{% endblock %}</title>
+    
+    <!-- CSS Principal -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    
+    <!-- Ícones Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Fonte Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- CSS Extra dos Templates -->
+    {% block extra_css %}{% endblock %}
+    
+    <!-- CSS para Notificações Funcionais -->
+<style>
+/* Estilos melhorados para notificações funcionais */
+.notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.notification-count {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+    color: var(--primary-color);
+    background: var(--gray-100);
+}
+
+.refresh-btn.spinning i {
+    animation: spin 1s linear infinite;
+}
+
+.loading-notifications {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--gray-500);
+}
+
+.loading-notifications i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.notification-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-link {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.875rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    transition: color 0.2s ease;
+}
+
+.btn-link:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.notification-bell {
+    transition: all 0.3s ease;
+}
+
+.notification-bell.has-notifications {
+    color: var(--warning-color);
+    animation: bellShake 0.5s ease-in-out;
+}
+
+.notification-item.clickable {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.notification-item.clickable:hover {
+    background: var(--primary-light);
+    border-left: 3px solid var(--primary-color);
+}
+
+.notification-item.danger {
+    border-left: 3px solid var(--danger-color);
+}
+
+.notification-item.warning {
+    border-left: 3px solid var(--warning-color);
+}
+
+.notification-item.info {
+    border-left: 3px solid var(--info-color);
+}
+
+.notification-item.success {
+    border-left: 3px solid var(--success-color);
+}
+
+.notification-item .notification-time {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+.empty-notifications {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--gray-500);
+}
+
+.empty-notifications i {
+    font-size: 2rem;
+    color: var(--gray-300);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+@keyframes bellShake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    75% { transform: rotate(10deg); }
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Carregando...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    {% if user.is_authenticated %}
+    <header class="header">
+        <div class="header-container">
+            <div class="header-left">
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="logo">
+                    <i class="fas fa-pills"></i>
+                    <span>FarmaSystem</span>
+                </div>
+            </div>
+            
+            <div class="header-center">
+                <div class="search-box">
+                    <input type="text" placeholder="Buscar medicamentos...">
+                    <button><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="notifications">
+                    <button class="notification-btn" id="notificationBtn">
+                        <i class="fas fa-bell notification-bell"></i>
+                        <span class="badge" id="notificationBadge">0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notificationDropdown">
+                        <div class="notification-header">
+                            <h4>Notificações</h4>
+                            <span class="notification-count" id="notificationCount">Carregando...</span>
+                            <button class="refresh-btn" id="refreshNotifications" title="Atualizar">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                        <div class="notification-list" id="notificationList">
+                            <div class="loading-notifications">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Carregando notificações...</p>
+                            </div>
+                        </div>
+                        <div class="notification-footer">
+                            <a href="{% url 'inventory:alert_list' %}" class="btn-link">Ver todos os alertas</a>
+                            <button id="markAllRead" class="btn-link">Marcar todas como lidas</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="user-menu">
+                    <button class="user-btn">
+                        <img src="{% static 'images/default-avatar.svg' %}" alt="Avatar" class="avatar">
+                        <div class="user-info">
+                            <span class="user-name">{{ user.first_name }} {{ user.last_name }}</span>
+                            <span class="user-role">{{ user_role_display|default:"Usuário" }}</span>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="user-dropdown">
+                        <a href="{% url 'authentication:profile' %}"><i class="fas fa-user"></i> Perfil</a>
+                        <a href="#"><i class="fas fa-cog"></i> Configurações</a>
+                        <hr>
+                        <a href="{% url 'authentication:logout' %}"><i class="fas fa-sign-out-alt"></i> Sair</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-content">
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{% url 'core:dashboard' %}" class="{% block nav_dashboard %}{% endblock %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'inventory:medication_list' %}" class="{% block nav_inventory %}{% endblock %}">
+                            <i class="fas fa-pills"></i>
+                            <span>Medicamentos</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'core:estoque' %}" class="{% block nav_estoque %}{% endblock %}">
+                            <i class="fas fa-boxes"></i>
+                            <span>Estoque</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'suppliers:supplier_list' %}" class="{% block nav_suppliers %}{% endblock %}">
+                            <i class="fas fa-truck"></i>
+                            <span>Fornecedores</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'branches:dashboard' %}" class="{% block nav_branches %}{% endblock %}">
+                            <i class="fas fa-building"></i>
+                            <span>Filiais</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'reports:report_list' %}" class="{% block nav_reports %}{% endblock %}">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Relatórios</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'inventory:alert_list' %}" class="{% block nav_alerts %}{% endblock %}">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Alertas</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Breadcrumb -->
+        {% block breadcrumb %}
+        <div class="breadcrumb">
+            <nav>
+                <ol>
+                    <li><a href="/"><i class="fas fa-home"></i></a></li>
+                    {% block breadcrumb_items %}{% endblock %}
+                </ol>
+            </nav>
+        </div>
+        {% endblock %}
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible">
+                <button class="alert-close">&times;</button>
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Page Content -->
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    {% else %}
+    <!-- Layout para usuários não autenticados -->
+    <div class="auth-layout">
+        {% block auth_content %}{% endblock %}
+    </div>
+    {% endif %}
+
+    <!-- JavaScript -->
+    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/notifications.js' %}"></script>
+    
+    <!-- Inicializar funcionalidades específicas -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar notificações funcionais
+            initNotificationsSystem();
+            
+            // Inicializar ações rápidas
+            initQuickActions();
+            
+            // Inicializar alertas interativos
+            initInteractiveAlerts();
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

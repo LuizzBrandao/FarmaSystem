@@ -1,0 +1,401 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ branch.name }} - Sistema de Farmácia{% endblock %}
+
+{% block nav_branches %}active{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'branches:dashboard' %}">Filiais</a></li>
+<li><a href="{% url 'branches:branch_list' %}">Lista</a></li>
+<li>{{ branch.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <i class="fas fa-building"></i>
+            {{ branch.name }}
+            <span class="branch-code">{{ branch.code }}</span>
+        </h1>
+        <div class="header-actions">
+            <a href="{% url 'branches:branch_stock' branch.pk %}" class="btn btn-primary">
+                <i class="fas fa-boxes"></i>
+                Ver Estoque
+            </a>
+            <a href="{% url 'branches:create_transfer' %}?from_branch={{ branch.pk }}" class="btn btn-outline-primary">
+                <i class="fas fa-exchange-alt"></i>
+                Nova Transferência
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Estatísticas da Filial -->
+<div class="stats-grid mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="stat-card bg-primary card-hover">
+            <div class="stat-icon">
+                <i class="fas fa-pills"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ total_medications }}</h3>
+                <p>Medicamentos</p>
+            </div>
+        </div>
+        
+        <div class="stat-card bg-success card-hover">
+            <div class="stat-icon">
+                <i class="fas fa-boxes"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ total_stock }}</h3>
+                <p>Unidades em Estoque</p>
+            </div>
+        </div>
+        
+        <div class="stat-card bg-warning card-hover">
+            <div class="stat-icon">
+                <i class="fas fa-exclamation-triangle {% if low_stock_count > 0 %}shake{% endif %}"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ low_stock_count }}</h3>
+                <p>Estoque Baixo</p>
+            </div>
+        </div>
+        
+        <div class="stat-card bg-info card-hover">
+            <div class="stat-icon">
+                <i class="fas fa-exchange-alt"></i>
+            </div>
+            <div class="stat-content">
+                <h3>{{ recent_transfers|length }}</h3>
+                <p>Transferências Recentes</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Informações da Filial -->
+    <div class="content-card">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-info-circle"></i> Informações</h3>
+            </div>
+            <div class="card-body">
+                <div class="info-group">
+                    <div class="info-item">
+                        <label><i class="fas fa-map-marker-alt"></i> Endereço:</label>
+                        <span>{{ branch.address }}</span>
+                    </div>
+                    
+                    <div class="info-item">
+                        <label><i class="fas fa-phone"></i> Telefone:</label>
+                        <span>{{ branch.phone }}</span>
+                    </div>
+                    
+                    {% if branch.email %}
+                    <div class="info-item">
+                        <label><i class="fas fa-envelope"></i> E-mail:</label>
+                        <span>{{ branch.email }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if branch.manager %}
+                    <div class="info-item">
+                        <label><i class="fas fa-user"></i> Gerente:</label>
+                        <span>{{ branch.manager.get_full_name|default:branch.manager.username }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="notifications-config">
+                    <h4><i class="fas fa-bell"></i> Notificações</h4>
+                    <div class="notification-status">
+                        <span class="status-item {% if branch.email_notifications %}active{% endif %}">
+                            <i class="fas fa-envelope"></i>
+                            E-mail {{ branch.email_notifications|yesno:"Ativo,Inativo" }}
+                        </span>
+                        <span class="status-item {% if branch.whatsapp_notifications %}active{% endif %}">
+                            <i class="fab fa-whatsapp"></i>
+                            WhatsApp {{ branch.whatsapp_notifications|yesno:"Ativo,Inativo" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Medicamentos com Estoque Baixo -->
+    <div class="content-card">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-exclamation-triangle text-warning"></i> Estoque Baixo</h3>
+                <a href="{% url 'branches:branch_stock' branch.pk %}?low_stock=true" class="btn btn-sm btn-outline-warning">Ver Todos</a>
+            </div>
+            <div class="card-body">
+                {% if low_stock_items %}
+                    <div class="low-stock-list">
+                        {% for stock in low_stock_items|slice:":5" %}
+                        <div class="stock-item warning">
+                            <div class="stock-info">
+                                <h5>{{ stock.medication.name }}</h5>
+                                <p>
+                                    <strong>{{ stock.available_quantity }}</strong> disponível
+                                    <small>(mín: {{ stock.medication.minimum_stock }})</small>
+                                </p>
+                            </div>
+                            <div class="stock-badge">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        
+                        {% if low_stock_items|length > 5 %}
+                        <div class="more-items">
+                            <p>+ {{ low_stock_items|length|add:"-5" }} medicamento(s) com estoque baixo</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="empty-state-small">
+                        <i class="fas fa-check-circle text-success"></i>
+                        <p>Todos os medicamentos com estoque adequado!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Transferências Recentes -->
+    <div class="content-card">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-exchange-alt"></i> Transferências Recentes</h3>
+            </div>
+            <div class="card-body">
+                {% if recent_transfers %}
+                    <div class="transfer-list">
+                        {% for transfer in recent_transfers|slice:":5" %}
+                        <div class="transfer-item">
+                            <div class="transfer-info">
+                                <h5>{{ transfer.medication.name }}</h5>
+                                <p>
+                                    <strong>{{ transfer.quantity }}</strong> unidades
+                                    <br>
+                                    <small>
+                                        {% if transfer.from_branch == branch %}
+                                            Para: {{ transfer.to_branch.name }}
+                                        {% else %}
+                                            De: {{ transfer.from_branch.name }}
+                                        {% endif %}
+                                    </small>
+                                </p>
+                            </div>
+                            <div class="transfer-status">
+                                <span class="status-badge status-{{ transfer.status }}">
+                                    {{ transfer.get_status_display }}
+                                </span>
+                                <small>{{ transfer.requested_at|date:"d/m" }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state-small">
+                        <i class="fas fa-exchange-alt"></i>
+                        <p>Nenhuma transferência recente</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.branch-code {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    margin-left: 1rem;
+    font-weight: 600;
+}
+
+.info-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-item span {
+    color: var(--gray-600);
+    padding-left: 1.5rem;
+}
+
+.notifications-config h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--gray-700);
+}
+
+.notification-status {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    background: var(--gray-100);
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.status-item.active {
+    background: var(--success-color);
+    color: white;
+}
+
+.low-stock-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.stock-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    background: var(--gray-50);
+}
+
+.stock-item.warning {
+    border-left: 4px solid var(--warning-color);
+}
+
+.stock-info h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+}
+
+.stock-info p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.stock-badge {
+    color: var(--warning-color);
+    font-size: 1.25rem;
+}
+
+.transfer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.transfer-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    background: var(--gray-50);
+}
+
+.transfer-info h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+}
+
+.transfer-info p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.transfer-status {
+    text-align: right;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: var(--warning-color);
+    color: white;
+}
+
+.status-completed {
+    background: var(--success-color);
+    color: white;
+}
+
+.status-in_transit {
+    background: var(--info-color);
+    color: white;
+}
+
+.status-cancelled {
+    background: var(--danger-color);
+    color: white;
+}
+
+.empty-state-small {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+}
+
+.empty-state-small i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.more-items {
+    text-align: center;
+    padding: 1rem;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    color: var(--gray-600);
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,789 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - Sistema de Farmácia{% endblock %}
+
+{% block nav_estoque %}active{% endblock %}
+
+{% load static %}
+{% load core_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+<style>
+/* Estilos específicos para estoque consolidado */
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: var(--radius-lg);
+}
+
+.page-header .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.page-info h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.page-info p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.header-actions .btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.header-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    border-left: 5px solid;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(45deg, transparent 60%, rgba(255,255,255,0.1));
+    transform: translateX(50%) translateY(-50%) rotate(45deg);
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.metric-card.metric-total { border-left-color: #3B82F6; }
+.metric-card.metric-normal { border-left-color: #10B981; }
+.metric-card.metric-warning { border-left-color: #F59E0B; }
+.metric-card.metric-danger { border-left-color: #EF4444; }
+
+.metric-icon {
+    width: 4rem;
+    height: 4rem;
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.metric-card.metric-total .metric-icon { background: #3B82F6; }
+.metric-card.metric-normal .metric-icon { background: #10B981; }
+.metric-card.metric-warning .metric-icon { background: #F59E0B; }
+.metric-card.metric-danger .metric-icon { background: #EF4444; }
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--neutral-900);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.875rem;
+    color: var(--neutral-600);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filters-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--neutral-200);
+}
+
+.filters-form {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--neutral-700);
+}
+
+.search-input {
+    position: relative;
+}
+
+.search-input i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--neutral-400);
+}
+
+.search-input input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.5rem;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+}
+
+.search-input input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-select {
+    padding: 0.75rem;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-filter {
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-filter:hover {
+    background: #2563EB;
+    transform: translateY(-1px);
+}
+
+.table-section {
+    background: white;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--neutral-200);
+}
+
+.section-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--neutral-200);
+    background: var(--neutral-50);
+}
+
+.section-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--neutral-900);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.stock-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.stock-table th {
+    background: var(--neutral-100);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--neutral-700);
+    border-bottom: 2px solid var(--neutral-200);
+    white-space: nowrap;
+}
+
+.stock-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--neutral-200);
+    vertical-align: top;
+}
+
+.batch-row {
+    transition: all 0.2s ease;
+    border-left: 4px solid transparent;
+}
+
+.batch-row:hover {
+    background: var(--neutral-50);
+}
+
+.batch-row.status-expired {
+    border-left-color: #EF4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.batch-row.status-near-expiry {
+    border-left-color: #F59E0B;
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.batch-row.status-normal {
+    border-left-color: #10B981;
+}
+
+.batch-info strong {
+    font-weight: 600;
+    color: var(--neutral-900);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.batch-info small {
+    color: var(--neutral-500);
+    font-size: 0.75rem;
+}
+
+.medication-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.category-badge {
+    display: inline-block;
+    background: var(--neutral-200);
+    color: var(--neutral-700);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.expiry-info strong {
+    font-weight: 600;
+    color: var(--neutral-900);
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.days-info {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.days-info.expired { color: #EF4444; }
+.days-info.warning { color: #F59E0B; }
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.status-expired {
+    background: #EF4444;
+    color: white;
+}
+
+.status-badge.status-near-expiry {
+    background: #F59E0B;
+    color: white;
+}
+
+.status-badge.status-normal {
+    background: #10B981;
+    color: white;
+}
+
+.locations-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.location-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    background: var(--neutral-100);
+    border-radius: var(--radius-sm);
+}
+
+.location-item i {
+    color: var(--neutral-500);
+}
+
+.location-item .quantity {
+    color: var(--primary-blue);
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.action-buttons .btn {
+    padding: 0.5rem;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--radius-md);
+    background: white;
+    color: var(--neutral-600);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-size: 0.75rem;
+}
+
+.action-buttons .btn:hover {
+    background: var(--primary-blue);
+    color: white;
+    border-color: var(--primary-blue);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--neutral-500);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    color: var(--neutral-300);
+}
+
+.empty-state h4 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--neutral-700);
+}
+
+@media (max-width: 768px) {
+    .filters-form {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .page-header .header-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+    
+    .header-actions {
+        justify-content: center;
+    }
+    
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+<li>{{ title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Page Header -->
+    <div class="page-header animate-fade-in-up">
+        <div class="header-content">
+            <div class="page-info">
+                <h1>
+                    <i class="fas fa-boxes"></i>
+                    {{ title }}
+                </h1>
+                <p>{{ page_description }}</p>
+            </div>
+            <div class="header-actions">
+                <a href="{% url 'core:unified_stock' %}" class="btn">
+                    <i class="fas fa-filter"></i>
+                    Vista Avançada
+                </a>
+                <a href="#" onclick="exportData()" class="btn">
+                    <i class="fas fa-download"></i>
+                    Exportar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cards de Métricas -->
+    <div class="metrics-grid animate-fade-in-up">
+        <div class="metric-card metric-total">
+            <div class="metric-icon">
+                <i class="fas fa-cubes"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value" data-count="{{ total_batches }}">0</div>
+                <div class="metric-label">Total de Lotes</div>
+            </div>
+        </div>
+        
+        <div class="metric-card metric-normal">
+            <div class="metric-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value" data-count="{{ normal_count }}">0</div>
+                <div class="metric-label">Lotes Normais</div>
+            </div>
+        </div>
+        
+        <div class="metric-card metric-warning">
+            <div class="metric-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value" data-count="{{ near_expiry_count }}">0</div>
+                <div class="metric-label">Próximo Vencimento</div>
+            </div>
+        </div>
+        
+        <div class="metric-card metric-danger">
+            <div class="metric-icon">
+                <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value" data-count="{{ expired_count }}">0</div>
+                <div class="metric-label">Lotes Vencidos</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros e Busca -->
+    <div class="filters-section animate-fade-in-up">
+        <form method="GET" class="filters-form">
+            <div class="filter-group">
+                <label class="filter-label">Buscar</label>
+                <div class="search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" value="{{ search_query }}" 
+                           placeholder="Buscar por medicamento, lote ou referência...">
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">Status</label>
+                <select name="status" class="form-select">
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if value == status_filter %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">Categoria</label>
+                <select name="category" class="form-select">
+                    <option value="all">Todas as Categorias</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category.id|slugify == category_filter %}selected{% endif %}>
+                        {{ category.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label class="filter-label">Localização</label>
+                <select name="location" class="form-select">
+                    <option value="all">Todas as Localizações</option>
+                    <option value="general" {% if location_filter == 'general' %}selected{% endif %}>
+                        Estoque Geral
+                    </option>
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}" {% if branch.id|slugify == location_filter %}selected{% endif %}>
+                        {{ branch.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-filter">
+                <i class="fas fa-filter"></i>
+                Filtrar
+            </button>
+        </form>
+    </div>
+
+    <!-- Tabela de Lotes -->
+    <div class="table-section animate-fade-in-up">
+        <div class="section-header">
+            <h2>
+                <i class="fas fa-list"></i>
+                Todos os Lotes 
+                {% if batches %}({{ batches|length }}){% endif %}
+            </h2>
+        </div>
+        
+        <div class="table-responsive">
+            {% if batches %}
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th>Lote</th>
+                            <th>Medicamento</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                            <th>Localizações</th>
+                            <th>Quantidade Total</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in batches %}
+                        <tr class="batch-row {% if batch.is_expired %}status-expired{% elif batch.is_near_expiry %}status-near-expiry{% else %}status-normal{% endif %}">
+                            <td>
+                                <div class="batch-info">
+                                    <strong>{{ batch.batch_number }}</strong>
+                                    {% if batch.supplier_reference %}
+                                    <small>Ref: {{ batch.supplier_reference }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            
+                            <td>
+                                <div class="medication-info">
+                                    <h4>{{ batch.medication.name }}</h4>
+                                    <span class="category-badge">{{ batch.medication.category.name }}</span>
+                                </div>
+                            </td>
+                            
+                            <td>
+                                <div class="expiry-info">
+                                    <strong>{{ batch.expiry_date|date:"d/m/Y" }}</strong>
+                                    {% if batch.days_until_expiry is not None %}
+                                    <small class="days-info {% if batch.days_until_expiry < 0 %}expired{% elif batch.days_until_expiry <= 30 %}warning{% endif %}">
+                                        {% if batch.days_until_expiry < 0 %}
+                                            {{ batch.days_until_expiry|abs_value }} dias vencido
+                                        {% else %}
+                                            {{ batch.days_until_expiry }} dias restantes
+                                        {% endif %}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            
+                            <td>
+                                {% if batch.is_expired %}
+                                    <span class="status-badge status-expired">
+                                        <i class="fas fa-times-circle"></i>
+                                        Vencido
+                                    </span>
+                                {% elif batch.is_near_expiry %}
+                                    <span class="status-badge status-near-expiry">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Próximo Vencimento
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-normal">
+                                        <i class="fas fa-check-circle"></i>
+                                        Normal
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <div class="locations-summary">
+                                    {% for location in batch.locations.all %}
+                                        {% if location.is_active and location.quantity > 0 %}
+                                        <div class="location-item">
+                                            <i class="fas {% if location.location_type == 'general' %}fa-warehouse{% else %}fa-building{% endif %}"></i>
+                                            <span>{{ location.location_name }}</span>
+                                            <span class="quantity">{{ location.quantity }}</span>
+                                        </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            
+                            <td>
+                                <strong>
+                                    {% with total_qty=0 %}
+                                        {% for loc in batch.locations.all %}
+                                            {% if loc.is_active %}
+                                                {% with total_qty=total_qty|add:loc.quantity %}{% endwith %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {{ batch.initial_quantity }}
+                                    {% endwith %}
+                                </strong>
+                            </td>
+                            
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'core:batch_detail' batch.batch_number %}" class="btn" title="Ver Detalhes">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="#" onclick="editBatch('{{ batch.batch_number }}')" class="btn" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-box-open"></i>
+                    <h4>Nenhum lote encontrado</h4>
+                    <p>
+                        {% if search_query or status_filter != 'all' or location_filter != 'all' or category_filter != 'all' %}
+                            Nenhum lote corresponde aos filtros aplicados. Tente ajustar os critérios de busca.
+                        {% else %}
+                            Não há lotes cadastrados no sistema.
+                        {% endif %}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/modern-dashboard.js' %}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animar contadores dos cards
+    const metricValues = document.querySelectorAll('[data-count]');
+    metricValues.forEach(el => {
+        DashboardModerno.animateCounter(el, parseInt(el.dataset.count), 1500);
+    });
+    
+    // Auto-submit nos filtros
+    const filterSelects = document.querySelectorAll('select[name="status"], select[name="location"], select[name="category"]');
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Limpar filtros
+    const clearFiltersBtn = document.getElementById('clearFilters');
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            window.location.href = window.location.pathname;
+        });
+    }
+});
+
+function exportData() {
+    // Implementar exportação
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('export', 'csv');
+    window.location.href = currentUrl.toString();
+}
+
+function editBatch(batchNumber) {
+    // Implementar edição de lote
+    // Por enquanto, redirecionar para admin
+    window.location.href = `/admin/core/medicationbatch/?q=${batchNumber}`;
+}
+
+// Atalhos de teclado
+document.addEventListener('keydown', function(e) {
+    // Ctrl/Cmd + K para focar na busca
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        document.querySelector('input[name="search"]').focus();
+    }
+    
+    // ESC para limpar busca
+    if (e.key === 'Escape') {
+        const searchInput = document.querySelector('input[name="search"]');
+        if (searchInput === document.activeElement) {
+            searchInput.value = '';
+            searchInput.form.submit();
+        }
+    }
+});
+</script>
+{% endblock %}

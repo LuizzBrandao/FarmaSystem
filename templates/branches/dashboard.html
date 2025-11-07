@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard de Filiais - Sistema de Farmácia{% endblock %}
+
+{% block nav_branches %}active{% endblock %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% load static %}{% static 'js/modern-dashboard.js' %}"></script>
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'branches:dashboard' %}">Filiais</a></li>
+<li>Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Modern Page Header -->
+    <div class="modern-page-header animate-fade-in-up">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="fas fa-building"></i>
+                Dashboard de Filiais
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'branches:create_transfer' %}" class="btn-modern btn-primary">
+                    <i class="fas fa-exchange-alt"></i>
+                    Nova Transferência
+                </a>
+                <a href="{% url 'branches:branch_list' %}" class="btn-modern btn-outline">
+                    <i class="fas fa-list"></i>
+                    Listar Filiais
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modern Metrics Grid -->
+    <div class="metrics-grid animate-fade-in-up">
+        <div class="metric-card branches">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div class="metric-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>+12%</span>
+                </div>
+            </div>
+            <div class="metric-value" data-count="{{ total_branches }}" data-duration="1500">{{ total_branches }}</div>
+            <div class="metric-label">Filiais Ativas</div>
+        </div>
+        
+        <div class="metric-card medications">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-pills"></i>
+                </div>
+                <div class="metric-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>+8%</span>
+                </div>
+            </div>
+            <div class="metric-value" data-count="{{ total_medications }}" data-duration="1800">{{ total_medications }}</div>
+            <div class="metric-label">Medicamentos Únicos</div>
+        </div>
+        
+        <div class="metric-card alerts">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-triangle {% if branches_with_alerts %}animate-pulse{% endif %}"></i>
+                </div>
+                {% if branches_with_alerts|length > 0 %}
+                <div class="metric-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span>Atenção</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="metric-value" data-count="{{ branches_with_alerts|length }}" data-duration="1200">{{ branches_with_alerts|length }}</div>
+            <div class="metric-label">Filiais com Alertas</div>
+        </div>
+        
+        <div class="metric-card transfers">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-exchange-alt"></i>
+                </div>
+                <div class="metric-trend">
+                    <i class="fas fa-clock"></i>
+                    <span>Pendentes</span>
+                </div>
+            </div>
+            <div class="metric-value" data-count="{{ pending_transfers }}" data-duration="1000">{{ pending_transfers }}</div>
+            <div class="metric-label">Transferências Pendentes</div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="modern-grid grid-cols-1 lg:grid-cols-2">
+        <!-- Lista de Filiais -->
+        <div class="content-card">
+            <div class="card-header">
+                <h3><i class="fas fa-building"></i> Filiais</h3>
+                <a href="{% url 'branches:branch_list' %}" class="btn-modern btn-outline btn-sm">Ver Todas</a>
+            </div>
+            <div class="card-body">
+                {% if branches %}
+                    <div class="branches-grid">
+                        {% for branch in branches %}
+                        <div class="branch-card {% if branch.low_stock_count > 0 %}has-alert{% endif %}">
+                            <div class="branch-header">
+                                <h4 class="branch-name">
+                                    <a href="{% url 'branches:branch_detail' branch.pk %}" style="text-decoration: none; color: inherit;">{{ branch.name }}</a>
+                                </h4>
+                                <span class="branch-code">{{ branch.code|default:"FL001" }}</span>
+                            </div>
+                            
+                            <div class="branch-details">
+                                <div class="branch-detail">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>{{ branch.address|truncatechars:50 }}</span>
+                                </div>
+                                {% if branch.phone %}
+                                <div class="branch-detail">
+                                    <i class="fas fa-phone"></i>
+                                    <span>{{ branch.phone }}</span>
+                                </div>
+                                {% endif %}
+                                {% if branch.manager %}
+                                <div class="branch-detail">
+                                    <i class="fas fa-user"></i>
+                                    <span>{{ branch.manager.get_full_name|default:branch.manager.username }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="branch-stats">
+                                <div class="stat">
+                                    <span class="stat-value">{{ branch.total_stock_quantity|default:0 }}</span>
+                                    <span class="stat-label">Unidades</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="stat-value">{{ branch.total_medications|default:0 }}</span>
+                                    <span class="stat-label">Medicamentos</span>
+                                </div>
+                                <div class="stat {% if branch.low_stock_count > 0 %}warning{% endif %}">
+                                    <span class="stat-value">{{ branch.low_stock_count|default:0 }}</span>
+                                    <span class="stat-label">Estoque Baixo</span>
+                                </div>
+                            </div>
+                            
+                            <div class="branch-actions">
+                                <a href="{% url 'branches:branch_stock' branch.pk %}" class="btn-modern btn-outline btn-sm" title="Ver Estoque">
+                                    <i class="fas fa-boxes"></i>
+                                    Estoque
+                                </a>
+                                <a href="{% url 'branches:branch_detail' branch.pk %}" class="btn-modern btn-primary btn-sm" title="Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                    Detalhes
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <h4>Nenhuma filial encontrada</h4>
+                        <p>Crie sua primeira filial no painel administrativo.</p>
+                        <a href="/admin/branches/branch/add/" class="btn-modern btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Adicionar Filial
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Alertas de Estoque -->
+        <div class="content-card">
+            <div class="card-header">
+                <h3><i class="fas fa-exclamation-triangle" style="color: var(--primary-amber);"></i> Alertas de Estoque</h3>
+            </div>
+            <div class="card-body">
+                {% if branches_with_alerts %}
+                    <div class="alert-list">
+                        {% for item in branches_with_alerts %}
+                        <div class="alert-item">
+                            <div class="alert-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="alert-content">
+                                <h4 class="alert-title">{{ item.branch.name }}</h4>
+                                <p class="alert-description">{{ item.low_stock_count }} medicamento(s) com estoque baixo</p>
+                            </div>
+                            <div class="alert-actions">
+                                <a href="{% url 'branches:branch_stock' item.branch.pk %}?low_stock=true" class="btn-modern btn-outline btn-sm">
+                                    <i class="fas fa-boxes"></i>
+                                    Ver Estoque
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--primary-green);">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <h4>Todos os estoques OK</h4>
+                        <p>Nenhum alerta de estoque baixo no momento.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Theme Toggle Button -->
+<button class="theme-toggle" onclick="DashboardModerno.ThemeManager.toggleTheme()" title="Alternar tema (Ctrl+D)">
+    <i class="fas fa-moon"></i>
+</button>
+
+<!-- Modern JavaScript for Animations -->
+<script>
+// Counter Animation for Metrics
+function animateCounter(element, target, duration) {
+    let start = 0;
+    const increment = target / (duration / 16);
+    const timer = setInterval(() => {
+        start += increment;
+        if (start >= target) {
+            start = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(start);
+    }, 16);
+}
+
+// Initialize counters when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const counters = document.querySelectorAll('[data-count]');
+    
+    // Intersection Observer for animation on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const element = entry.target;
+                const target = parseInt(element.getAttribute('data-count'));
+                const duration = parseInt(element.getAttribute('data-duration')) || 1500;
+                
+                animateCounter(element, target, duration);
+                observer.unobserve(element);
+            }
+        });
+    }, { threshold: 0.5 });
+    
+    counters.forEach(counter => observer.observe(counter));
+    
+    // Add hover effects to cards
+    const cards = document.querySelectorAll('.metric-card, .branch-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-4px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Lote {{ stock.batch_number }} - Estoque{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'inventory:stock_list' %}">Estoque</a></li>
+<li>Lote {{ stock.batch_number }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-boxes"></i>
+        Lote {{ stock.batch_number }}
+    </h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Detalhes do Lote</h3>
+    </div>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Medicamento:</strong>
+                <span>{{ stock.medication.name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Quantidade:</strong>
+                <span>{{ stock.quantity }} unidades</span>
+            </div>
+            <div class="info-item">
+                <strong>Data de Entrada:</strong>
+                <span>{{ stock.entry_date|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Data de Validade:</strong>
+                <span>{{ stock.expiry_date|date:"d/m/Y" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

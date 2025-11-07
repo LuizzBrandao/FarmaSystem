@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}Lista de Filiais - Sistema de Farmácia{% endblock %}
+
+{% block nav_branches %}active{% endblock %}
+
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'branches:dashboard' %}">Filiais</a></li>
+<li>Lista</li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="modern-page-header animate-fade-in-up">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="fas fa-building"></i>
+                Lista de Filiais
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'branches:dashboard' %}" class="btn-modern btn-outline">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="card-header">
+            <h3><i class="fas fa-building"></i> Filiais Ativas</h3>
+            <div class="search-filters">
+                <input type="text" placeholder="Buscar filiais..." class="form-control" data-search-target=".branch-card" style="padding: var(--space-3); border: 1px solid var(--neutral-300); border-radius: var(--radius-md); min-width: 250px;">
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if branches %}
+                <div class="branches-grid">
+                    {% for branch in branches %}
+                    <div class="branch-card">
+                        <div class="branch-header">
+                            <h4 class="branch-name">{{ branch.name }}</h4>
+                            <span class="branch-code">{{ branch.code|default:"FL001" }}</span>
+                        </div>
+                        
+                        <div class="branch-details">
+                            <div class="branch-detail">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>{{ branch.address }}</span>
+                            </div>
+                            
+                            <div class="branch-detail">
+                                <i class="fas fa-phone"></i>
+                                <span>{{ branch.phone }}</span>
+                            </div>
+                            
+                            {% if branch.email %}
+                            <div class="branch-detail">
+                                <i class="fas fa-envelope"></i>
+                                <span>{{ branch.email }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if branch.manager %}
+                            <div class="branch-detail">
+                                <i class="fas fa-user"></i>
+                                <span>{{ branch.manager.get_full_name|default:branch.manager.username }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="branch-stats">
+                            <div class="stat">
+                                <span class="stat-value">{{ branch.total_stock_quantity }}</span>
+                                <span class="stat-label">Unidades</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">{{ branch.total_medications }}</span>
+                                <span class="stat-label">Medicamentos</span>
+                            </div>
+                            <div class="stat {% if branch.low_stock_count > 0 %}stat-warning{% endif %}">
+                                <span class="stat-value">{{ branch.low_stock_count }}</span>
+                                <span class="stat-label">Estoque Baixo</span>
+                            </div>
+                        </div>
+                        
+                        <div class="branch-notifications">
+                            {% if branch.email_notifications %}
+                            <span class="notification-badge email" title="Notificações por E-mail">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                            {% endif %}
+                            {% if branch.whatsapp_notifications %}
+                            <span class="notification-badge whatsapp" title="Notificações por WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="branch-actions">
+                            <a href="{% url 'branches:branch_detail' branch.pk %}" class="btn-modern btn-primary btn-sm">
+                                <i class="fas fa-eye"></i>
+                                Detalhes
+                            </a>
+                            <a href="{% url 'branches:branch_stock' branch.pk %}" class="btn-modern btn-outline btn-sm">
+                                <i class="fas fa-boxes"></i>
+                                Estoque
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-building"></i>
+                    </div>
+                    <h4>Nenhuma filial encontrada</h4>
+                    <p>Crie filiais no painel administrativo para começar.</p>
+                    <a href="/admin/branches/branch/add/" class="btn-modern btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Adicionar Filial
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if supplier %}Editar Fornecedor{% else %}Novo Fornecedor{% endif %} - Sistema de Farmácia
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'suppliers:supplier_list' %}">Fornecedores</a></li>
+<li>{% if supplier %}Editar{% else %}Novo{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">
+        <i class="fas fa-truck"></i>
+        {% if supplier %}Editar Fornecedor{% else %}Novo Fornecedor{% endif %}
+    </h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="form-label">Nome do Fornecedor</label>
+                <input type="text" name="name" value="{{ supplier.name|default:'' }}" class="form-control" required>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">E-mail</label>
+                        <input type="email" name="email" value="{{ supplier.email|default:'' }}" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Telefone</label>
+                        <input type="text" name="phone" value="{{ supplier.phone|default:'' }}" class="form-control">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Endereço</label>
+                <textarea name="address" class="form-control">{{ supplier.address|default:'' }}</textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    {% if supplier %}Atualizar{% else %}Criar{% endif %} Fornecedor
+                </button>
+                <a href="{% url 'suppliers:supplier_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

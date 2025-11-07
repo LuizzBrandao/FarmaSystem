@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ supplier.name }} - Fornecedores{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'suppliers:supplier_list' %}">Fornecedores</a></li>
+<li>{{ supplier.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ supplier.name }}</h1>
+    <div class="header-actions">
+        {% if is_farmaceutico or is_admin %}
+        <a href="{% url 'suppliers:supplier_edit' supplier.pk %}" class="btn btn-primary">
+            <i class="fas fa-edit"></i>
+            Editar
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Informações do Fornecedor</h3>
+    </div>
+    <div class="card-body">
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Nome:</strong>
+                <span>{{ supplier.name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>E-mail:</strong>
+                <span>{{ supplier.email|default:"Não informado" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Telefone:</strong>
+                <span>{{ supplier.phone|default:"Não informado" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>Endereço:</strong>
+                <span>{{ supplier.address|default:"Não informado" }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+ERROR 2025-09-20 14:23:43,002 services 25976 25728 Erro ao enviar email: (530, b'5.7.0 Authentication Required. For more information, go to\n5.7.0  https://support.google.com/accounts/troubleshooter/2402620. d9443c01a7336-269802df76dsm85385525ad.74 - gsmtp', 'webmaster@localhost')
+WARNING 2025-09-20 14:23:43,031 services 25976 25728 Configurações do WhatsApp não definidas
+INFO 2025-09-20 14:23:43,049 services 25976 25728 WhatsApp enviado para +5511999998888
+ERROR 2025-09-20 14:23:45,259 services 25976 25728 Erro ao enviar email: (530, b'5.7.0 Authentication Required. For more information, go to\n5.7.0  https://support.google.com/accounts/troubleshooter/2402620. d2e1a72fcca58-77cfe75ef24sm8434876b3a.55 - gsmtp', 'webmaster@localhost')
+WARNING 2025-09-20 14:23:45,277 services 25976 25728 Configurações do WhatsApp não definidas
+INFO 2025-09-20 14:23:45,290 services 25976 25728 WhatsApp enviado para +5511999998888

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ company_name }}</h1>
+        <h2>{{ title }}</h2>
+        <div class="meta">
+            <p>Gerado em: {{ generated_at|date:"d/m/Y H:i:s" }}</p>
+            <p>Por: {{ user.get_full_name|default:user.username }}</p>
+        </div>
+    </div>
+    
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Total de Medicamentos</h3>
+            <p class="value">{{ metrics.total_medications }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Estoque Total</h3>
+            <p class="value">{{ metrics.total_stock }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Disponível</h3>
+            <p class="value">{{ metrics.total_available }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Reservado</h3>
+            <p class="value">{{ metrics.total_reserved }}</p>
+        </div>
+    </div>
+    
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Medicamentos Vencidos</h3>
+            <p class="value">{{ metrics.expired_medications }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Próximo Vencimento</h3>
+            <p class="value">{{ metrics.near_expiry_medications }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Estoque Baixo</h3>
+            <p class="value">{{ metrics.low_stock_medications }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Status Normal</h3>
+            <p class="value">{{ normal_count|default:0 }}</p>
+        </div>
+    </div>
+    
+    {% if medicamentos %}
+    <table>
+        <thead>
+            <tr>
+                <th>Medicamento</th>
+                <th>Categoria</th>
+                <th>Estoque Total</th>
+                <th>Disponível</th>
+                <th>Reservado</th>
+                <th>Estoque Mínimo</th>
+                <th>Próximo Vencimento</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for medicamento in medicamentos %}
+            <tr class="{% if medicamento.status == 'expired' %}status-expired{% elif medicamento.status == 'near_expiry' %}status-near-expiry{% else %}status-normal{% endif %}{% if medicamento.is_low_stock %} low-stock{% endif %}">
+                <td class="font-bold">{{ medicamento.name }}</td>
+                <td>{{ medicamento.category }}</td>
+                <td class="text-right">{{ medicamento.total_quantity }}</td>
+                <td class="text-right">{{ medicamento.available_quantity }}</td>
+                <td class="text-right">{{ medicamento.total_reserved }}</td>
+                <td class="text-right">{{ medicamento.minimum_stock|default:"N/A" }}</td>
+                <td class="text-center">
+                    {% if medicamento.next_expiry %}
+                        {{ medicamento.next_expiry|date:"d/m/Y" }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </td>
+                <td class="text-center">
+                    {% if medicamento.status == 'expired' %}
+                        <span class="font-bold">Vencido</span>
+                        {% if medicamento.expired_batches_count > 1 %}
+                            <br><small>({{ medicamento.expired_batches_count }} lotes)</small>
+                        {% endif %}
+                    {% elif medicamento.status == 'near_expiry' %}
+                        <span class="font-bold">Próximo Vencimento</span>
+                    {% elif medicamento.is_low_stock %}
+                        <span class="font-bold">Estoque Baixo</span>
+                    {% else %}
+                        Normal
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data">
+        <p>Nenhum medicamento encontrado no sistema.</p>
+    </div>
+    {% endif %}
+    
+    <div class="page-break"></div>
+    
+    <!-- Resumo por Status -->
+    <h3>Resumo por Status de Vencimento</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Quantidade de Medicamentos</th>
+                <th>Percentual</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="status-normal">
+                <td>Normal</td>
+                <td class="text-right">{{ normal_count|default:0 }}</td>
+                <td class="text-right">
+                    {% if metrics.total_medications > 0 %}
+                        {% widthratio normal_count|default:0 metrics.total_medications 100 %}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="status-near-expiry">
+                <td>Próximo ao Vencimento</td>
+                <td class="text-right">{{ metrics.near_expiry_medications }}</td>
+                <td class="text-right">
+                    {% if metrics.total_medications > 0 %}
+                        {% widthratio metrics.near_expiry_medications metrics.total_medications 100 %}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="status-expired">
+                <td>Vencido</td>
+                <td class="text-right">{{ metrics.expired_medications }}</td>
+                <td class="text-right">
+                    {% if metrics.total_medications > 0 %}
+                        {% widthratio metrics.expired_medications metrics.total_medications 100 %}%
+                    {% else %}
+                        0%
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- Medicamentos com Estoque Baixo -->
+    {% if metrics.low_stock_medications > 0 %}
+    <h3>Medicamentos com Estoque Baixo</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Medicamento</th>
+                <th>Estoque Atual</th>
+                <th>Estoque Mínimo</th>
+                <th>Diferença</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for medicamento in medicamentos %}
+                {% if medicamento.is_low_stock %}
+                <tr class="low-stock">
+                    <td>{{ medicamento.name }}</td>
+                    <td class="text-right">{{ medicamento.available_quantity }}</td>
+                    <td class="text-right">{{ medicamento.minimum_stock }}</td>
+                    <td class="text-right">{{ medicamento.available_quantity|add:medicamento.minimum_stock|floatformat:0 }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</body>
+</html>

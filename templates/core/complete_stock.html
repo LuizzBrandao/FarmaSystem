@@ -1,0 +1,299 @@
+{% extends 'base.html' %}
+
+{% block title %}Estoque Completo - Sistema de Farmácia{% endblock %}
+
+{% block nav_inventory %}active{% endblock %}
+
+{% load static %}
+{% load core_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+<li>Estoque Completo</li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Page Header -->
+    <div class="modern-page-header animate-fade-in-up">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="fas fa-warehouse"></i>
+                Estoque Completo
+                <span class="subtitle">Vista consolidada de todos os lotes</span>
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'core:unified_stock' %}" class="btn-modern btn-primary">
+                    <i class="fas fa-filter"></i>
+                    Vista Avançada
+                </a>
+                <a href="{% url 'core:dashboard' %}" class="btn-modern btn-outline">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar ao Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas Rápidas -->
+    <div class="metrics-grid animate-fade-in-up">
+        <div class="metric-card branches">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-cubes"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_batches }}</div>
+            <div class="metric-label">Total de Lotes</div>
+        </div>
+        
+        <div class="metric-card medications">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ normal_count }}</div>
+            <div class="metric-label">Lotes Normais</div>
+        </div>
+        
+        <div class="metric-card alerts">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ near_expiry_count }}</div>
+            <div class="metric-label">Próximo Vencimento</div>
+        </div>
+        
+        <div class="metric-card transfers" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ expired_count }}</div>
+            <div class="metric-label">Lotes Vencidos</div>
+        </div>
+    </div>
+
+    <!-- Lista de Lotes -->
+    <div class="content-card">
+        <div class="card-header">
+            <h3><i class="fas fa-list"></i> Todos os Lotes ({{ batches|length }})</h3>
+        </div>
+        <div class="card-body">
+            {% if batches %}
+                <div class="table-responsive">
+                    <table class="stock-table">
+                        <thead>
+                            <tr>
+                                <th>Lote</th>
+                                <th>Medicamento</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                                <th>Localizações</th>
+                                <th>Quantidade Total</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for batch in batches %}
+                            <tr class="batch-row {{ batch.expiry_status_class }}">
+                                <td>
+                                    <div class="batch-info">
+                                        <strong>{{ batch.batch_number }}</strong>
+                                        {% if batch.supplier_reference %}
+                                        <small>Ref: {{ batch.supplier_reference }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <div class="medication-info">
+                                        <h4>{{ batch.medication.name }}</h4>
+                                        <span class="category-badge">{{ batch.medication.category.name }}</span>
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <div class="expiry-info">
+                                        <strong>{{ batch.expiry_date|date:"d/m/Y" }}</strong>
+                                        {% if batch.days_until_expiry is not None %}
+                                        <small class="days-info {% if batch.days_until_expiry < 0 %}expired{% elif batch.days_until_expiry <= 30 %}warning{% endif %}">
+                                            {% if batch.days_until_expiry < 0 %}
+                                                {{ batch.days_until_expiry|abs_value }} dias vencido
+                                            {% else %}
+                                                {{ batch.days_until_expiry }} dias
+                                            {% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    {% if batch.is_expired %}
+                                        <span class="status-badge status-expired">
+                                            <i class="fas fa-times-circle"></i>
+                                            Vencido
+                                        </span>
+                                    {% elif batch.is_near_expiry %}
+                                        <span class="status-badge status-near-expiry">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Próximo Vencimento
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-normal">
+                                            <i class="fas fa-check-circle"></i>
+                                            Normal
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    <div class="locations-summary">
+                                        {% for location in batch.locations.all %}
+                                            {% if location.is_active and location.quantity > 0 %}
+                                            <div class="location-item">
+                                                <i class="fas {% if location.location_type == 'general' %}fa-warehouse{% else %}fa-building{% endif %}"></i>
+                                                <span>{{ location.location_name }}</span>
+                                                <small>({{ location.quantity }})</small>
+                                            </div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <strong>
+                                        {% with total_qty=0 %}
+                                            {% for loc in batch.locations.all %}
+                                                {% if loc.is_active %}{{ total_qty|add:loc.quantity }}{% endif %}
+                                            {% endfor %}
+                                        {% endwith %}
+                                        {{ batch.initial_quantity }}
+                                    </strong>
+                                </td>
+                                
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'core:batch_detail' batch.batch_number %}" class="btn btn-sm btn-outline-info" title="Ver Detalhes">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <h4>Nenhum lote encontrado</h4>
+                    <p>Não há lotes cadastrados no sistema.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos específicos para estoque completo */
+.subtitle {
+    font-size: 0.875rem;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-left: 1rem;
+}
+
+.batch-row {
+    transition: all var(--transition-base);
+    border-left: 4px solid transparent;
+}
+
+.batch-row:hover {
+    background: var(--neutral-50);
+}
+
+.batch-row.status-expired {
+    border-left-color: #EF4444;
+}
+
+.batch-row.status-near-expiry {
+    border-left-color: #F59E0B;
+}
+
+.batch-row.status-normal {
+    border-left-color: #10B981;
+}
+
+.batch-info strong {
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.batch-info small {
+    display: block;
+    color: var(--neutral-500);
+    font-size: 0.75rem;
+}
+
+.medication-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--neutral-900);
+}
+
+.expiry-info strong {
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.days-info {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.days-info.expired {
+    color: #EF4444;
+    font-weight: 600;
+}
+
+.days-info.warning {
+    color: #F59E0B;
+    font-weight: 600;
+}
+
+.locations-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.location-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.location-item i {
+    color: var(--neutral-500);
+}
+
+.location-item small {
+    color: var(--neutral-600);
+    font-weight: 600;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ company_name }}</h1>
+        <h2>{{ title }}</h2>
+        <div class="meta">
+            <p>Período: {{ start_date|date:"d/m/Y" }} a {{ end_date|date:"d/m/Y" }}</p>
+            <p>Gerado em: {{ generated_at|date:"d/m/Y H:i:s" }}</p>
+            <p>Por: {{ user.get_full_name|default:user.username }}</p>
+        </div>
+    </div>
+    
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <h3>Total de Movimentações</h3>
+            <p class="value">{{ stats.total_movements }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Quantidade Total</h3>
+            <p class="value">{{ stats.total_quantity }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Transferências Concluídas</h3>
+            <p class="value">{{ stats.completed_movements }}</p>
+        </div>
+        <div class="metric-card">
+            <h3>Pendentes</h3>
+            <p class="value">{{ stats.pending_movements }}</p>
+        </div>
+    </div>
+    
+    {% if movimentacoes %}
+    <table>
+        <thead>
+            <tr>
+                <th>Data</th>
+                <th>Tipo</th>
+                <th>Medicamento</th>
+                <th>Quantidade</th>
+                <th>Origem</th>
+                <th>Destino</th>
+                <th>Usuário</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for mov in movimentacoes %}
+            <tr>
+                <td>{{ mov.date|date:"d/m/Y H:i" }}</td>
+                <td class="text-center">
+                    {% if mov.type == 'transfer' %}
+                        Transferência
+                    {% elif mov.type == 'entry' %}
+                        <span class="movement-in">Entrada</span>
+                    {% elif mov.type == 'exit' %}
+                        <span class="movement-out">Saída</span>
+                    {% else %}
+                        {{ mov.type|title }}
+                    {% endif %}
+                </td>
+                <td class="font-bold">{{ mov.medication_name }}</td>
+                <td class="text-right">{{ mov.quantity }}</td>
+                <td>{{ mov.from_location }}</td>
+                <td>{{ mov.to_location }}</td>
+                <td>{{ mov.user }}</td>
+                <td class="text-center">
+                    {% if mov.status == 'Aprovado' %}
+                        <span class="status-normal">{{ mov.status }}</span>
+                    {% elif mov.status == 'Pendente' %}
+                        <span class="status-near-expiry">{{ mov.status }}</span>
+                    {% elif mov.status == 'Rejeitado' %}
+                        <span class="status-expired">{{ mov.status }}</span>
+                    {% else %}
+                        {{ mov.status }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-data">
+        <p>Nenhuma movimentação encontrada no período selecionado.</p>
+    </div>
+    {% endif %}
+    
+    {% if stats.total_movements > 0 %}
+    <div class="page-break"></div>
+    
+    <!-- Resumo por Status -->
+    <h3>Resumo por Status</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Quantidade de Movimentações</th>
+                <th>Percentual</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="status-normal">
+                <td>Concluídas</td>
+                <td class="text-right">{{ stats.completed_movements }}</td>
+                <td class="text-right">
+                    {% widthratio stats.completed_movements stats.total_movements 100 %}%
+                </td>
+            </tr>
+            <tr class="status-near-expiry">
+                <td>Pendentes</td>
+                <td class="text-right">{{ stats.pending_movements }}</td>
+                <td class="text-right">
+                    {% widthratio stats.pending_movements stats.total_movements 100 %}%
+                </td>
+            </tr>
+            <tr class="status-expired">
+                <td>Rejeitadas</td>
+                <td class="text-right">{{ stats.rejected_movements }}</td>
+                <td class="text-right">
+                    {% widthratio stats.rejected_movements stats.total_movements 100 %}%
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <!-- Resumo por Tipo de Movimentação -->
+    <h3>Resumo por Localização</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Localização</th>
+                <th>Movimentações de Origem</th>
+                <th>Movimentações de Destino</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% regroup movimentacoes by from_location as from_groups %}
+            {% regroup movimentacoes by to_location as to_groups %}
+            
+            {% for location in locations_list %}
+            <tr>
+                <td>{{ location }}</td>
+                <td class="text-right">
+                    {% for group in from_groups %}
+                        {% if group.grouper == location %}
+                            {{ group.list|length }}
+                        {% endif %}
+                    {% empty %}
+                        0
+                    {% endfor %}
+                </td>
+                <td class="text-right">
+                    {% for group in to_groups %}
+                        {% if group.grouper == location %}
+                            {{ group.list|length }}
+                        {% endif %}
+                    {% empty %}
+                        0
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</body>
+</html>

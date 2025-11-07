@@ -1,0 +1,491 @@
+{% extends 'base.html' %}
+
+{% block title %}Estoque - Sistema de Farmácia{% endblock %}
+
+{% block nav_stock %}active{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'inventory:stock_list' %}">Estoque</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <i class="fas fa-boxes"></i>
+            Controle de Estoque
+        </h1>
+        <div class="header-actions">
+            {% if is_farmaceutico or is_admin %}
+            <a href="{% url 'inventory:stock_entry' %}" class="btn btn-primary btn-hover-lift">
+                <i class="fas fa-plus"></i>
+                Entrada de Estoque
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="card">
+        <div class="card-header">
+            <h3>Lotes em Estoque</h3>
+            <div class="filters">
+                <select class="form-control" id="statusFilter">
+                    <option value="">Todos os status</option>
+                    <option value="normal">Normal</option>
+                    <option value="low">Estoque Baixo</option>
+                    <option value="near-expiry">Próximo ao Vencimento</option>
+                    <option value="expired">Vencido</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if stock_items %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Medicamento</th>
+                                <th>Lote</th>
+                                <th>Quantidade</th>
+                                <th>Validade</th>
+                                <th>Status</th>
+                                <th>Entrada</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stock in stock_items %}
+                            <tr class="stock-row {% if stock.is_expired %}expired{% elif stock.is_near_expiry %}near-expiry{% elif stock.medication.is_low_stock %}low-stock{% endif %}">
+                                <td>
+                                    <div class="medication-cell">
+                                        <strong>{{ stock.medication.name }}</strong>
+                                        <small class="category">{{ stock.medication.category.name }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <code class="batch-number">{{ stock.batch_number }}</code>
+                                </td>
+                                <td>
+                                    <div class="quantity-cell">
+                                        <span class="quantity">{{ stock.quantity }}</span>
+                                        <small>unidades</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="expiry-cell">
+                                        {{ stock.expiry_date|date:"d/m/Y" }}
+                                        {% if stock.is_expired %}
+                                            <span class="badge danger">Vencido</span>
+                                        {% elif stock.is_near_expiry %}
+                                            <span class="badge warning">Próximo</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if stock.is_expired %}
+                                        <span class="status-badge expired">
+                                            <i class="fas fa-times-circle"></i>
+                                            Vencido
+                                        </span>
+                                    {% elif stock.is_near_expiry %}
+                                        <span class="status-badge warning">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Próximo Vencimento
+                                        </span>
+                                    {% elif stock.medication.is_low_stock %}
+                                        <span class="status-badge low">
+                                            <i class="fas fa-arrow-down"></i>
+                                            Estoque Baixo
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge normal">
+                                            <i class="fas fa-check-circle"></i>
+                                            Normal
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ stock.entry_date|date:"d/m/Y" }}</small>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'inventory:stock_detail' stock.pk %}" class="btn btn-sm btn-outline tooltip-animated" data-tooltip="Ver detalhes">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        {% if is_farmaceutico or is_admin %}
+                                        <button type="button" 
+                                                class="btn btn-sm btn-warning movimentar-estoque-btn" 
+                                                data-stock-id="{{ stock.pk }}"
+                                                data-medication-name="{{ stock.medication.name }}"
+                                                data-current-quantity="{{ stock.quantity }}"
+                                                title="Movimentar estoque deste lote">
+                                            <i class="fas fa-exchange-alt"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-boxes"></i>
+                    <h3>Nenhum lote em estoque</h3>
+                    <p>Registre sua primeira entrada de estoque para começar.</p>
+                    {% if is_farmaceutico or is_admin %}
+                    <a href="{% url 'inventory:stock_entry' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Primeira Entrada
+                    </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.medication-cell strong {
+    display: block;
+    color: var(--gray-900);
+}
+
+.medication-cell .category {
+    color: var(--primary-color);
+    font-size: 0.75rem;
+}
+
+.batch-number {
+    background: var(--gray-100);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.quantity-cell .quantity {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.quantity-cell small {
+    color: var(--gray-500);
+}
+
+.expiry-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.badge.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.badge.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-badge.normal {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success-color);
+}
+
+.status-badge.warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+}
+
+.status-badge.low {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--info-color);
+}
+
+.status-badge.expired {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.stock-row.expired {
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.stock-row.near-expiry {
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.stock-row.low-stock {
+    background: rgba(6, 182, 212, 0.05);
+}
+
+.stock-row:hover {
+    background: var(--gray-50) !important;
+}
+
+/* Botão de movimentação */
+.movimentar-estoque-btn {
+    cursor: pointer !important;
+    transition: all 0.2s ease;
+}
+
+.movimentar-estoque-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+}
+</style>
+
+<!-- Modal de Movimentação de Estoque -->
+<div id="movimentacaoModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>
+                <i class="fas fa-exchange-alt text-warning"></i>
+                Movimentar Estoque
+            </h3>
+            <button type="button" class="modal-close" onclick="closeModal('movimentacaoModal')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <form id="movimentacaoForm" method="post" action="{% url 'inventory:stock_movement' %}">
+            {% csrf_token %}
+            <div class="modal-body">
+                <input type="hidden" id="stock_id" name="stock_id">
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-pills"></i>
+                        Medicamento
+                    </label>
+                    <input type="text" id="medication_name" class="form-control" readonly>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-boxes"></i>
+                                Quantidade Atual
+                            </label>
+                            <input type="text" id="current_quantity" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-list"></i>
+                                Tipo de Movimentação
+                            </label>
+                            <select name="movement_type" id="movement_type" class="form-control" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="saida">Saída (Dispensação)</option>
+                                <option value="ajuste_positivo">Ajuste Positivo</option>
+                                <option value="ajuste_negativo">Ajuste Negativo</option>
+                                <option value="perda">Perda/Vencimento</option>
+                                <option value="transferencia">Transferência</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-calculator"></i>
+                                Quantidade
+                            </label>
+                            <input type="number" name="quantity" id="quantity" class="form-control" required min="1">
+                            <small class="form-text text-muted">Quantidade a ser movimentada</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-calendar"></i>
+                                Data da Movimentação
+                            </label>
+                            <input type="date" name="movement_date" id="movement_date" class="form-control" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="fas fa-comment"></i>
+                        Observações
+                    </label>
+                    <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Motivo da movimentação, observações adicionais..."></textarea>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Atenção:</strong> Esta ação irá alterar o estoque do medicamento. Verifique os dados antes de confirmar.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline" onclick="closeModal('movimentacaoModal')">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-check"></i>
+                    Confirmar Movimentação
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar botões de movimentação
+    initMovimentacaoButtons();
+});
+
+function initMovimentacaoButtons() {
+    console.log('🔧 DEBUG: Iniciando initMovimentacaoButtons...');
+    const buttons = document.querySelectorAll('.movimentar-estoque-btn');
+    console.log(`🔧 DEBUG: Encontrados ${buttons.length} botões movimentar`);
+    
+    buttons.forEach((button, index) => {
+        console.log(`🔧 DEBUG: Configurando botão ${index + 1}`, button);
+        
+        button.addEventListener('click', function(e) {
+            console.log('🎯 DEBUG: CLICK DETECTADO no botão movimentar!');
+            console.log('🎯 DEBUG: Event:', e);
+            console.log('🎯 DEBUG: Target:', e.target);
+            console.log('🎯 DEBUG: CurrentTarget:', e.currentTarget);
+            
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const stockId = this.getAttribute('data-stock-id');
+            const medicationName = this.getAttribute('data-medication-name');
+            const currentQuantity = this.getAttribute('data-current-quantity');
+            
+            console.log('🎯 DEBUG: Dados extraídos:');
+            console.log('   Stock ID:', stockId);
+            console.log('   Medicamento:', medicationName);
+            console.log('   Quantidade:', currentQuantity);
+            
+            // Preencher modal
+            document.getElementById('stock_id').value = stockId;
+            document.getElementById('medication_name').value = medicationName;
+            document.getElementById('current_quantity').value = currentQuantity + ' unidades';
+            
+            // Definir data atual
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('movement_date').value = today;
+            
+            // Limpar campos
+            document.getElementById('movement_type').value = '';
+            document.getElementById('quantity').value = '';
+            document.getElementById('notes').value = '';
+            
+            console.log('🎯 DEBUG: Tentando abrir modal...');
+            // Abrir modal
+            openModal('movimentacaoModal');
+        });
+        
+        console.log(`✅ DEBUG: Event listener adicionado ao botão ${index + 1}`);
+    });
+    
+    console.log('✅ DEBUG: Todos os botões configurados');
+    
+    // Validação do formulário
+    const form = document.getElementById('movimentacaoForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const currentQuantity = parseInt(document.getElementById('current_quantity').value);
+            const movementType = document.getElementById('movement_type').value;
+            
+            // Validações específicas
+            if (movementType === 'saida' || movementType === 'ajuste_negativo' || movementType === 'perda') {
+                if (quantity > currentQuantity) {
+                    e.preventDefault();
+                    alert('A quantidade não pode ser maior que o estoque atual para este tipo de movimentação.');
+                    return false;
+                }
+            }
+            
+            // Confirmação
+            const confirmMessage = `Confirma a movimentação de ${quantity} unidades do tipo "${movementType}"?`;
+            if (!confirm(confirmMessage)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    }
+}
+
+// Função para abrir modal (se não existir)
+function openModal(modalId) {
+    console.log('🔧 DEBUG: openModal chamado com ID:', modalId);
+    const modal = document.getElementById(modalId);
+    console.log('🔧 DEBUG: Modal elemento:', modal);
+    
+    if (modal) {
+        console.log('✅ DEBUG: Modal encontrado, abrindo...');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        console.log('✅ DEBUG: Modal aberto com sucesso');
+    } else {
+        console.error('❌ DEBUG: Modal não encontrado com ID:', modalId);
+    }
+}
+
+// Função para fechar modal (se não existir)
+function closeModal(modalId) {
+    console.log('🔧 DEBUG: closeModal chamado com ID:', modalId);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        console.log('✅ DEBUG: Modal encontrado, fechando...');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        console.log('✅ DEBUG: Modal fechado com sucesso');
+    } else {
+        console.error('❌ DEBUG: Modal não encontrado para fechar:', modalId);
+    }
+}
+</script>
+
+{% endblock %}

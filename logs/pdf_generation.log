@@ -1,0 +1,67 @@
+INFO 2025-09-20 16:35:54,110 pdf_generator 14920 3768 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:35:54,174 pdf_generator 19208 8376 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:35:54,563 pdf_generator 12408 24792 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:35:54,584 pdf_generator 4384 1080 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:28,327 pdf_generator 3324 23240 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:28,330 pdf_generator 14452 17684 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:28,790 pdf_generator 18416 28356 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:28,893 pdf_generator 14756 1912 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:42,388 pdf_generator 23636 13484 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:42,435 pdf_generator 24368 14596 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:42,605 pdf_generator 24852 13924 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:36:42,833 pdf_generator 26220 11224 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:39:10,069 pdf_generator 27852 16208 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:39:44,379 pdf_generator 28112 20552 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:39:44,415 pdf_generator 28112 20552 Iniciando geração do relatório de estoque
+DEBUG 2025-09-20 16:39:44,415 pdf_generator 28112 20552 Buscando dados de estoque otimizados
+DEBUG 2025-09-20 16:39:44,435 pdf_generator 28112 20552 Dados de estoque coletados: 8 medicamentos
+ERROR 2025-09-20 16:39:44,435 pdf_generator 28112 20552 Erro na geração do PDF de estoque: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\New folder\apps\reports\pdf_generator.py", line 96, in generate_stock_report_pdf
+    return self._generate_with_reportlab_stock(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+WARNING 2025-09-20 16:39:44,438 pdf_generator 28112 20552 Gerando PDF de erro para: Relatório de Estoque
+INFO 2025-09-20 16:39:44,441 pdf_generator 28112 20552 Iniciando geração do relatório de movimentações
+DEBUG 2025-09-20 16:39:44,441 pdf_generator 28112 20552 Buscando movimentações de 2025-08-21 19:39:44.441807+00:00 até 2025-09-20 19:39:44.441807+00:00
+DEBUG 2025-09-20 16:39:44,446 pdf_generator 28112 20552 Movimentações coletadas: 0 registros
+ERROR 2025-09-20 16:39:44,446 pdf_generator 28112 20552 Erro na geração do PDF de movimentações: 'PDFGenerator' object has no attribute '_generate_with_reportlab_movements'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\New folder\apps\reports\pdf_generator.py", line 137, in generate_movements_report_pdf
+    return self._generate_with_reportlab_movements(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_movements'
+WARNING 2025-09-20 16:39:44,447 pdf_generator 28112 20552 Gerando PDF de erro para: Relatório de Movimentações
+INFO 2025-09-20 16:39:44,448 pdf_generator 28112 20552 Iniciando geração do relatório de vencimentos
+DEBUG 2025-09-20 16:39:44,449 pdf_generator 28112 20552 Buscando dados de vencimento até 2025-10-20
+ERROR 2025-09-20 16:39:44,514 pdf_generator 28112 20552 Erro na geração do PDF de vencimentos: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\New folder\apps\reports\pdf_generator.py", line 174, in generate_expiration_report_pdf
+    return self._generate_with_reportlab_expiration(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
+WARNING 2025-09-20 16:39:44,516 pdf_generator 28112 20552 Gerando PDF de erro para: Relatório de Vencimentos
+INFO 2025-09-20 16:51:00,174 pdf_generator 4384 20036 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:51:22,623 pdf_generator 23576 9432 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:51:43,884 pdf_generator 25268 12572 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:52:15,510 pdf_generator 12964 23848 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-20 16:52:15,748 pdf_generator 12964 23848 Iniciando geração do relatório de estoque
+DEBUG 2025-09-20 16:52:15,749 pdf_generator 12964 23848 Buscando dados de estoque otimizados
+DEBUG 2025-09-20 16:52:15,771 pdf_generator 12964 23848 Dados de estoque coletados: 8 medicamentos
+ERROR 2025-09-20 16:52:15,771 pdf_generator 12964 23848 Erro na geração do PDF de estoque: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\New folder\apps\reports\pdf_generator.py", line 96, in generate_stock_report_pdf
+    return self._generate_with_reportlab_stock(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+WARNING 2025-09-20 16:52:15,773 pdf_generator 12964 23848 Gerando PDF de erro para: Relatório de Estoque
+INFO 2025-09-24 11:07:11,285 pdf_generator 23232 22860 PDFGenerator inicializado com engine: reportlab
+INFO 2025-09-24 11:11:02,431 pdf_generator 23232 23156 Iniciando geração do relatório de vencimentos
+DEBUG 2025-09-24 11:11:02,432 pdf_generator 23232 23156 Buscando dados de vencimento até 2025-10-24
+ERROR 2025-09-24 11:11:02,497 pdf_generator 23232 23156 Erro na geração do PDF de vencimentos: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\com pdf top\apps\reports\pdf_generator.py", line 174, in generate_expiration_report_pdf
+    return self._generate_with_reportlab_expiration(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
+WARNING 2025-09-24 11:11:02,517 pdf_generator 23232 23156 Gerando PDF de erro para: Relatório de Vencimentos

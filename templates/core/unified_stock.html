@@ -1,0 +1,518 @@
+{% extends 'base.html' %}
+
+{% block title %}Estoque Unificado - Sistema de Farmácia{% endblock %}
+
+{% block nav_inventory %}active{% endblock %}
+
+{% load static %}
+{% load core_filters %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/modern-dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'css/dark-theme.css' %}">
+{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+<li>Estoque Unificado</li>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Page Header -->
+    <div class="modern-page-header animate-fade-in-up">
+        <div class="header-content">
+            <h1 class="page-title">
+                <i class="fas fa-cubes"></i>
+                Estoque Unificado
+                <span class="subtitle">Fonte única de verdade para todos os lotes</span>
+            </h1>
+            <div class="header-actions">
+                <a href="{% url 'core:consistency_report' %}" class="btn-modern btn-outline">
+                    <i class="fas fa-clipboard-check"></i>
+                    Relatório de Consistência
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas de Consistência -->
+    {% if expired_batches > 0 or near_expiry_batches > 0 %}
+    <div class="alert-banner animate-fade-in-up">
+        {% if expired_batches > 0 %}
+        <div class="alert-item danger">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <h4>{{ expired_batches }} lote(s) vencido(s)</h4>
+                <p>Ação imediata necessária para lotes vencidos</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if near_expiry_batches > 0 %}
+        <div class="alert-item warning">
+            <i class="fas fa-clock"></i>
+            <div>
+                <h4>{{ near_expiry_batches }} lote(s) próximo(s) ao vencimento</h4>
+                <p>Verificar disponibilidade e planejar transferências</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Estatísticas Gerais -->
+    <div class="metrics-grid animate-fade-in-up">
+        <div class="metric-card branches">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-cubes"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_batches }}</div>
+            <div class="metric-label">Total de Lotes Únicos</div>
+        </div>
+        
+        <div class="metric-card medications">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-map-marker-alt"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_locations }}</div>
+            <div class="metric-label">Localizações Ativas</div>
+        </div>
+        
+        <div class="metric-card alerts">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ near_expiry_batches }}</div>
+            <div class="metric-label">Próximos Vencimento</div>
+        </div>
+        
+        <div class="metric-card transfers" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ expired_batches }}</div>
+            <div class="metric-label">Lotes Vencidos</div>
+        </div>
+    </div>
+
+    <!-- Filtros Avançados -->
+    <div class="content-card">
+        <div class="card-header">
+            <h3><i class="fas fa-filter"></i> Filtros Avançados</h3>
+        </div>
+        <div class="card-body">
+            <form method="get" class="unified-filters">
+                <div class="filter-grid">
+                    <div class="filter-group">
+                        <label>Buscar Medicamento:</label>
+                        <input type="text" name="search" value="{{ search }}" placeholder="Nome do medicamento..." class="form-control">
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Categoria:</label>
+                        <select name="category" class="form-control">
+                            <option value="">Todas as categorias</option>
+                            {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                                {{ cat.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Tipo de Localização:</label>
+                        <select name="location_type" class="form-control">
+                            {% for value, label in location_type_choices %}
+                            <option value="{{ value }}" {% if value == selected_location_type %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Filial Específica:</label>
+                        <select name="branch_id" class="form-control">
+                            <option value="">Todas as filiais</option>
+                            {% for branch in branches %}
+                            <option value="{{ branch.id }}" {% if branch.id|stringformat:"s" == selected_branch_id %}selected{% endif %}>
+                                {{ branch.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label>Status de Vencimento:</label>
+                        <select name="expiry_status" class="form-control">
+                            {% for value, label in expiry_status_choices %}
+                            <option value="{{ value }}" {% if value == expiry_status %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="low_stock" value="true" {% if low_stock_only %}checked{% endif %}>
+                            Apenas estoque baixo
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="filter-actions">
+                    <button type="submit" class="btn-modern btn-primary">
+                        <i class="fas fa-search"></i>
+                        Filtrar
+                    </button>
+                    <a href="{% url 'core:unified_stock' %}" class="btn-modern btn-outline">
+                        <i class="fas fa-times"></i>
+                        Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de Localizações -->
+    <div class="content-card">
+        <div class="card-header">
+            <h3><i class="fas fa-list"></i> Localizações de Lotes ({{ locations|length }})</h3>
+        </div>
+        <div class="card-body">
+            {% if locations %}
+                <div class="table-responsive">
+                    <table class="unified-table">
+                        <thead>
+                            <tr>
+                                <th>Lote</th>
+                                <th>Medicamento</th>
+                                <th>Localização</th>
+                                <th>Vencimento</th>
+                                <th>Status</th>
+                                <th>Quantidade</th>
+                                <th>Reservado</th>
+                                <th>Disponível</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for location in locations %}
+                            <tr class="location-row {{ location.batch.expiry_status_class }} {% if location.is_low_stock %}low-stock{% endif %}">
+                                <td>
+                                    <div class="batch-info">
+                                        <strong>{{ location.batch.batch_number }}</strong>
+                                        {% if location.batch.supplier_reference %}
+                                        <small>Ref: {{ location.batch.supplier_reference }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <div class="medication-info">
+                                        <h4>{{ location.batch.medication.name }}</h4>
+                                        <span class="category-badge">{{ location.batch.medication.category.name }}</span>
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <div class="location-info">
+                                        <i class="fas {% if location.location_type == 'general' %}fa-warehouse{% else %}fa-building{% endif %}"></i>
+                                        <span>{{ location.location_name }}</span>
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    <div class="expiry-info">
+                                        <strong>{{ location.batch.expiry_date|date:"d/m/Y" }}</strong>
+                                        {% if location.batch.days_until_expiry is not None %}
+                                        <small class="days-info {% if location.batch.days_until_expiry < 0 %}expired{% elif location.batch.days_until_expiry <= 30 %}warning{% endif %}">
+                                            {% if location.batch.days_until_expiry < 0 %}
+                                                {{ location.batch.days_until_expiry|abs_value }} dias vencido
+                                            {% else %}
+                                                {{ location.batch.days_until_expiry }} dias
+                                            {% endif %}
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                
+                                <td>
+                                    {% if location.batch.is_expired %}
+                                        <span class="status-badge status-expired">
+                                            <i class="fas fa-times-circle"></i>
+                                            Vencido
+                                        </span>
+                                    {% elif location.batch.is_near_expiry %}
+                                        <span class="status-badge status-near-expiry">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            Próximo Vencimento
+                                        </span>
+                                    {% else %}
+                                        <span class="status-badge status-normal">
+                                            <i class="fas fa-check-circle"></i>
+                                            Normal
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    <strong>{{ location.quantity }}</strong>
+                                </td>
+                                
+                                <td>
+                                    {% if location.reserved_quantity > 0 %}
+                                        <span class="reserved">{{ location.reserved_quantity }}</span>
+                                    {% else %}
+                                        <span class="text-muted">0</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td>
+                                    <strong class="{% if location.is_low_stock %}text-warning{% endif %}">
+                                        {{ location.available_quantity }}
+                                    </strong>
+                                </td>
+                                
+                                <td>
+                                    <div class="action-buttons">
+                                        <a href="{% url 'core:batch_detail' location.batch.batch_number %}" class="btn btn-sm btn-outline-info" title="Ver Todas as Localizações">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="fas fa-cubes"></i>
+                    </div>
+                    <h4>Nenhuma localização encontrada</h4>
+                    <p>Não há lotes que correspondam aos filtros selecionados.</p>
+                    <a href="{% url 'core:unified_stock' %}" class="btn-modern btn-primary">
+                        <i class="fas fa-refresh"></i>
+                        Ver Todos os Lotes
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* Estilos específicos para o estoque unificado */
+.subtitle {
+    font-size: 0.875rem;
+    font-weight: 400;
+    opacity: 0.8;
+    margin-left: 1rem;
+}
+
+.alert-banner {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.alert-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border-left: 4px solid;
+    flex: 1;
+}
+
+.alert-item.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border-left-color: #EF4444;
+    color: #DC2626;
+}
+
+.alert-item.warning {
+    background: rgba(245, 158, 11, 0.1);
+    border-left-color: #F59E0B;
+    color: #D97706;
+}
+
+.alert-item i {
+    font-size: 2rem;
+    opacity: 0.8;
+}
+
+.alert-item h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.alert-item p {
+    margin: 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+}
+
+.unified-filters {
+    padding: 0;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: var(--neutral-700);
+    font-size: 0.875rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+}
+
+.unified-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.unified-table th {
+    background: var(--neutral-50);
+    padding: 1rem;
+    font-weight: 600;
+    color: var(--neutral-700);
+    text-align: left;
+    border-bottom: 2px solid var(--neutral-200);
+}
+
+.unified-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--neutral-200);
+    vertical-align: middle;
+}
+
+.location-row {
+    transition: all var(--transition-base);
+    border-left: 4px solid transparent;
+}
+
+.location-row:hover {
+    background: var(--neutral-50);
+}
+
+.location-row.status-expired {
+    border-left-color: #EF4444;
+}
+
+.location-row.status-near-expiry {
+    border-left-color: #F59E0B;
+}
+
+.location-row.status-normal {
+    border-left-color: #10B981;
+}
+
+.location-row.low-stock {
+    background: rgba(245, 158, 11, 0.05);
+}
+
+.batch-info strong {
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.batch-info small {
+    display: block;
+    color: var(--neutral-500);
+    font-size: 0.75rem;
+}
+
+.medication-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    color: var(--neutral-900);
+}
+
+.location-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.location-info i {
+    color: var(--neutral-500);
+}
+
+.expiry-info strong {
+    font-weight: 600;
+    color: var(--neutral-900);
+}
+
+.days-info {
+    display: block;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.days-info.expired {
+    color: #EF4444;
+    font-weight: 600;
+}
+
+.days-info.warning {
+    color: #F59E0B;
+    font-weight: 600;
+}
+
+.reserved {
+    color: #F59E0B;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .filter-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .alert-banner {
+        flex-direction: column;
+    }
+    
+    .unified-table {
+        font-size: 0.75rem;
+    }
+    
+    .unified-table th,
+    .unified-table td {
+        padding: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

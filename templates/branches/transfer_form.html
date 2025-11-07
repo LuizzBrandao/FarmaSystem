@@ -1,0 +1,355 @@
+{% extends 'base.html' %}
+
+{% block title %}Nova Transferência - Sistema de Farmácia{% endblock %}
+
+{% block nav_branches %}active{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'branches:dashboard' %}">Filiais</a></li>
+<li>Nova Transferência</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <i class="fas fa-exchange-alt"></i>
+            Nova Transferência entre Filiais
+        </h1>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-plus"></i> Criar Solicitação de Transferência</h3>
+        </div>
+        
+        <form method="post" class="card-body">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="from_branch">Filial de Origem:</label>
+                    <select id="from_branch" name="from_branch" class="form-control" required>
+                        <option value="">Selecione a filial de origem</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }} ({{ branch.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="to_branch">Filial de Destino:</label>
+                    <select id="to_branch" name="to_branch" class="form-control" required>
+                        <option value="">Selecione a filial de destino</option>
+                        {% for branch in branches %}
+                        <option value="{{ branch.pk }}">{{ branch.name }} ({{ branch.code }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="medication">Medicamento:</label>
+                <select id="medication" name="medication" class="form-control" required>
+                    <option value="">Selecione o medicamento</option>
+                    {% for medication in medications %}
+                    <option value="{{ medication.pk }}">{{ medication.name }} - {{ medication.dosage }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="quantity">Quantidade:</label>
+                    <input type="number" id="quantity" name="quantity" class="form-control" min="1" required>
+                    <small class="form-help">Quantidade a ser transferida</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>Estoque Disponível:</label>
+                    <div id="available-stock" class="stock-info">
+                        <span class="stock-value">-</span>
+                        <small>Selecione filial e medicamento</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="reason">Motivo da Transferência:</label>
+                <textarea id="reason" name="reason" class="form-control" rows="4" required placeholder="Descreva o motivo desta transferência..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <a href="{% url 'branches:dashboard' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i>
+                    Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                    Solicitar Transferência
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Informações sobre o processo -->
+<div class="content-card mt-6">
+    <div class="card info-card">
+        <div class="card-header">
+            <h3><i class="fas fa-info-circle"></i> Como funciona a transferência</h3>
+        </div>
+        <div class="card-body">
+            <div class="process-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Solicitação</h4>
+                        <p>Você solicita a transferência especificando origem, destino, medicamento e quantidade.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Validação</h4>
+                        <p>Sistema verifica se há estoque suficiente na filial de origem e reserva os itens.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Notificação</h4>
+                        <p>Filial de destino recebe notificação por email/WhatsApp sobre a solicitação.</p>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Aprovação</h4>
+                        <p>Administrador aprova a transferência e os estoques são atualizados automaticamente.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: var(--transition-base);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.stock-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+}
+
+.stock-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.stock-info small {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+}
+
+.stock-info.low-stock .stock-value {
+    color: var(--warning-color);
+}
+
+.stock-info.no-stock .stock-value {
+    color: var(--danger-color);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 2rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.info-card {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
+    color: white;
+}
+
+.info-card .card-header h3 {
+    color: white;
+}
+
+.process-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+}
+
+.step {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.step-content h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+}
+
+.step-content p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .process-steps {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fromBranchSelect = document.getElementById('from_branch');
+    const medicationSelect = document.getElementById('medication');
+    const availableStockDiv = document.getElementById('available-stock');
+    const quantityInput = document.getElementById('quantity');
+    
+    // Função para atualizar estoque disponível
+    function updateAvailableStock() {
+        const fromBranchId = fromBranchSelect.value;
+        const medicationId = medicationSelect.value;
+        
+        if (!fromBranchId || !medicationId) {
+            availableStockDiv.innerHTML = `
+                <span class="stock-value">-</span>
+                <small>Selecione filial e medicamento</small>
+            `;
+            return;
+        }
+        
+        // Aqui você faria uma requisição AJAX para buscar o estoque
+        // Por enquanto, vamos simular
+        availableStockDiv.innerHTML = `
+            <span class="stock-value">Carregando...</span>
+            <small>Verificando estoque</small>
+        `;
+        
+        // Simular requisição
+        setTimeout(() => {
+            const mockStock = Math.floor(Math.random() * 100) + 10;
+            const stockClass = mockStock < 20 ? 'low-stock' : '';
+            
+            availableStockDiv.className = `stock-info ${stockClass}`;
+            availableStockDiv.innerHTML = `
+                <span class="stock-value">${mockStock}</span>
+                <small>unidades disponíveis</small>
+            `;
+            
+            // Definir máximo para o input de quantidade
+            quantityInput.max = mockStock;
+        }, 1000);
+    }
+    
+    // Event listeners
+    fromBranchSelect.addEventListener('change', updateAvailableStock);
+    medicationSelect.addEventListener('change', updateAvailableStock);
+    
+    // Validar que filiais são diferentes
+    document.getElementById('to_branch').addEventListener('change', function() {
+        if (this.value === fromBranchSelect.value) {
+            alert('A filial de destino deve ser diferente da filial de origem.');
+            this.value = '';
+        }
+    });
+    
+    fromBranchSelect.addEventListener('change', function() {
+        const toBranchSelect = document.getElementById('to_branch');
+        if (this.value === toBranchSelect.value) {
+            toBranchSelect.value = '';
+        }
+    });
+    
+    // Pre-popular campos se vieram da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('from_branch')) {
+        fromBranchSelect.value = urlParams.get('from_branch');
+    }
+    if (urlParams.get('medication')) {
+        medicationSelect.value = urlParams.get('medication');
+        updateAvailableStock();
+    }
+});
+</script>
+{% endblock %}

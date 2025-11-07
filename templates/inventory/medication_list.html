@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+
+{% block title %}Medicamentos - Sistema de Farmácia{% endblock %}
+
+{% block nav_inventory %}active{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'inventory:medication_list' %}">Medicamentos</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <i class="fas fa-pills"></i>
+            Medicamentos
+        </h1>
+        <div class="header-actions">
+            {% if is_farmaceutico or is_admin %}
+            <a href="{% url 'inventory:medication_create' %}" class="btn btn-primary btn-hover-lift">
+                <i class="fas fa-plus"></i>
+                Novo Medicamento
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="card">
+        <div class="card-header">
+            <h3>Lista de Medicamentos</h3>
+            <div class="search-filters">
+                <input type="text" placeholder="Buscar medicamentos..." class="form-control" data-search-target=".medication-item">
+            </div>
+        </div>
+        
+        <div class="card-body">
+            {% if medications %}
+                <div class="medications-grid">
+                    {% for medication in medications %}
+                    <div class="medication-item card-hover">
+                        <div class="medication-image">
+                            {% if medication.image %}
+                                <img src="{{ medication.image.url }}" alt="{{ medication.name }}">
+                            {% else %}
+                                <div class="no-image">
+                                    <i class="fas fa-pills"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="medication-info">
+                            <h4>{{ medication.name }}</h4>
+                            <p class="category">{{ medication.category.name }}</p>
+                            <p class="dosage">{{ medication.dosage }}</p>
+                            
+                            <div class="medication-stats">
+                                <div class="stat-item">
+                                    <span class="label">Estoque:</span>
+                                    <span class="value {% if medication.is_low_stock %}text-danger{% else %}text-success{% endif %}">
+                                        {{ medication.current_stock }}
+                                    </span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">Preço:</span>
+                                    <span class="value">R$ {{ medication.price }}</span>
+                                </div>
+                            </div>
+                            
+                            {% if medication.is_low_stock %}
+                            <div class="alert-badge danger">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Estoque Baixo
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="medication-actions">
+                            <a href="{% url 'inventory:medication_detail' medication.pk %}" class="btn btn-sm btn-outline">
+                                <i class="fas fa-eye"></i>
+                                Ver
+                            </a>
+                            {% if is_farmaceutico or is_admin %}
+                            <a href="{% url 'inventory:medication_edit' medication.pk %}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-edit"></i>
+                                Editar
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-pills"></i>
+                    <h3>Nenhum medicamento cadastrado</h3>
+                    <p>Comece adicionando seu primeiro medicamento ao sistema.</p>
+                    {% if is_farmaceutico or is_admin %}
+                    <a href="{% url 'inventory:medication_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Adicionar Medicamento
+                    </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.page-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0;
+}
+
+.page-title i {
+    color: var(--primary-color);
+}
+
+.search-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.medications-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.medication-item {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.medication-item:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.medication-image {
+    height: 200px;
+    background: var(--gray-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.medication-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.no-image {
+    color: var(--gray-400);
+    font-size: 3rem;
+}
+
+.medication-info {
+    padding: 1.5rem;
+}
+
+.medication-info h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+.category {
+    color: var(--primary-color);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.dosage {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    margin-bottom: 1rem;
+}
+
+.medication-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-item .label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-item .value {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.alert-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.alert-badge.danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.medication-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--gray-600);
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--gray-300);
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: var(--gray-900);
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .medications-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

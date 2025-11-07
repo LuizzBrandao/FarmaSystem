@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+{% block title %}Perfil - Sistema de Farmácia{% endblock %}
+
+{% block breadcrumb_items %}
+<li><a href="{% url 'authentication:profile' %}">Perfil</a></li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1 class="page-title">
+            <i class="fas fa-user"></i>
+            Meu Perfil
+        </h1>
+    </div>
+</div>
+
+<div class="profile-container">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card profile-card">
+                <div class="card-body text-center">
+                    <div class="profile-avatar">
+                        {% if profile.photo %}
+                            <img src="{{ profile.photo.url }}" alt="Avatar" class="avatar-large">
+                        {% else %}
+                            <div class="avatar-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <h3>{{ user.get_full_name|default:user.username }}</h3>
+                    <p class="role-badge {{ user_role }}">
+                        <i class="fas fa-user-tag"></i>
+                        {{ user_role_display|default:"Usuário" }}
+                    </p>
+                    
+                    <div class="profile-stats">
+                        <div class="stat-item">
+                            <span class="number">{{ user.date_joined|timesince }}</span>
+                            <span class="label">No sistema há</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Informações Pessoais</h3>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" class="profile-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Nome</label>
+                                    <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Sobrenome</label>
+                                    <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">E-mail</label>
+                            <input type="email" name="email" value="{{ user.email }}" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Telefone</label>
+                            <input type="text" name="phone" value="{{ profile.phone|default:'' }}" class="form-control">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Endereço</label>
+                            <textarea name="address" class="form-control" rows="3">{{ profile.address|default:'' }}</textarea>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-hover-lift">
+                                <i class="fas fa-save"></i>
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Informações do Sistema -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3>Informações do Sistema</h3>
+                </div>
+                
+                <div class="card-body">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <i class="fas fa-user"></i>
+                            <div>
+                                <strong>Nome de Usuário</strong>
+                                <span>{{ user.username }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-calendar"></i>
+                            <div>
+                                <strong>Membro desde</strong>
+                                <span>{{ user.date_joined|date:"d/m/Y" }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-clock"></i>
+                            <div>
+                                <strong>Último login</strong>
+                                <span>{{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item">
+                            <i class="fas fa-shield-alt"></i>
+                            <div>
+                                <strong>Função</strong>
+                                <span>{{ user_role_display|default:"Usuário" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.row {
+    display: flex;
+    gap: 2rem;
+    margin: 0;
+}
+
+.col-md-4 {
+    flex: 0 0 33.333333%;
+}
+
+.col-md-6 {
+    flex: 0 0 50%;
+}
+
+.col-md-8 {
+    flex: 0 0 66.666667%;
+}
+
+.profile-card {
+    text-align: center;
+}
+
+.profile-avatar {
+    margin-bottom: 1.5rem;
+}
+
+.avatar-large {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--primary-color);
+}
+
+.avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--gray-400);
+    margin: 0 auto;
+    border: 4px solid var(--primary-color);
+}
+
+.role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin: 1rem 0;
+}
+
+.role-badge.admin {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+}
+
+.role-badge.farmaceutico {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--secondary-color);
+}
+
+.role-badge.operador {
+    background: rgba(37, 99, 235, 0.1);
+    color: var(--primary-color);
+}
+
+.profile-stats {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-item .number {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.stat-item .label {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+.profile-form .row {
+    margin-bottom: 1rem;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: 8px;
+}
+
+.info-item i {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.info-item div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.info-item strong {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.info-item span {
+    color: var(--gray-600);
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .row {
+        flex-direction: column;
+    }
+    
+    .profile-form .row {
+        flex-direction: column;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
