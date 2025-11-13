@@ -72,16 +72,8 @@ Feito com **Django**, **Python** e uma interface simples com **HTML + CSS puro**
 - Verde saúde: `#10b981`  
 - Sucesso: `#22c55e`  
 - Aviso: `#f59e0b`  
-- Erro: `#ef4444`  
-
----
-
-## 📱 Responsividade
-Funciona bem em:
-- 📱 Celulares  
-- 💻 Computadores  
-- 🖥️ Monitores grandes  
-
+- Erro: `#ef4444`
+  
 ---
 
 ## 📊 Funcionalidades resumidas
