@@ -86,7 +86,3 @@ Feito com **Django**, **Python** e uma interface simples com **HTML + CSS puro**
 - Controle de usuários  
 
 ---
-
-Desenvolvido com muito aprendizado e dedicação para facilitar o dia a dia de quem trabalha com controle de estoque em farmácias.
-
-> © 2024 FarmaSystem – Projeto pessoal e aberto a melhorias!  
