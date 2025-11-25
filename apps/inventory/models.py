@@ -143,16 +143,18 @@ class Medication(models.Model):
     
     @property
     def current_stock(self):
-        """Retorna o estoque atual do medicamento"""
+        """Retorna o estoque atual do medicamento (agregado por filial)"""
         from django.db.models import Sum
-        total = self.stock_set.aggregate(
+        # Agrega o estoque total somando BranchStock por medicamento em todas as filiais
+        from apps.branches.models import BranchStock
+        total = BranchStock.objects.filter(medication=self).aggregate(
             total=Sum('quantity')
         )['total']
         return total or 0
     
     @property
     def is_low_stock(self):
-        """Verifica se o estoque está baixo"""
+        """Verifica se o estoque está baixo (usando estoque agregado por filial)"""
         return self.current_stock <= self.minimum_stock
 
 
@@ -171,11 +173,6 @@ class Stock(models.Model):
     
     expiry_date = models.DateField(
         verbose_name='Data de Validade'
-    )
-    
-    batch_number = models.CharField(
-        max_length=50,
-        verbose_name='Número do Lote'
     )
     
     entry_date = models.DateTimeField(
@@ -201,7 +198,7 @@ class Stock(models.Model):
         ordering = ['-entry_date']
     
     def __str__(self):
-        return f"{self.medication.name} - Lote: {self.batch_number}"
+        return f"{self.medication.name} - {self.quantity} unidades"
     
     @property
     def is_expired(self):
@@ -245,13 +242,6 @@ class StockMovement(models.Model):
     
     reason = models.TextField(
         verbose_name='Motivo',
-        blank=True,
-        null=True
-    )
-    
-    batch_number = models.CharField(
-        max_length=50,
-        verbose_name='Número do Lote',
         blank=True,
         null=True
     )

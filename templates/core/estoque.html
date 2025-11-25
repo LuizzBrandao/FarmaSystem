@@ -480,9 +480,9 @@
                 <p>{{ page_description }}</p>
             </div>
             <div class="header-actions">
-                <a href="{% url 'core:unified_stock' %}" class="btn">
-                    <i class="fas fa-filter"></i>
-                    Vista Avançada
+                <a href="{% url 'branches:dashboard' %}" class="btn">
+                    <i class="fas fa-building"></i>
+                    Estoque por Filial
                 </a>
                 <a href="#" onclick="exportData()" class="btn">
                     <i class="fas fa-download"></i>
@@ -621,7 +621,7 @@
                         <tr class="batch-row {% if batch.is_expired %}status-expired{% elif batch.is_near_expiry %}status-near-expiry{% else %}status-normal{% endif %}">
                             <td>
                                 <div class="batch-info">
-                                    <strong>{{ batch.batch_number }}</strong>
+                                    <!-- batch_number removido -->
                                     {% if batch.supplier_reference %}
                                     <small>Ref: {{ batch.supplier_reference }}</small>
                                     {% endif %}
@@ -698,10 +698,11 @@
                             
                             <td>
                                 <div class="action-buttons">
-                                    <a href="{% url 'core:batch_detail' batch.batch_number %}" class="btn" title="Ver Detalhes">
+                                    <!-- Links para batch_detail removidos - funcionalidade de lotes removida -->
+                                    <a href="#" class="btn" title="Ver Detalhes" style="display: none;">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="#" onclick="editBatch('{{ batch.batch_number }}')" class="btn" title="Editar">
+                                    <a href="#" class="btn" title="Editar" style="display: none;">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 </div>
@@ -729,7 +730,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/modern-dashboard.js' %}"></script>
+<script src="{% static 'js/modern-dashboard.js' %}?v=20251114"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Animar contadores dos cards
@@ -786,4 +787,9 @@ document.addEventListener('keydown', function(e) {
     }
 });
 </script>
+{% endblock %}
+
+{% extends 'base.html' %}
+{% block content %}
+<div class="alert alert-info">A página de Estoque Consolidado foi descontinuada no reset sem LOTE. Acesse <a href="{% url 'branches:dashboard' %}">Estoque por Filial</a>.</div>
 {% endblock %}

@@ -160,7 +160,7 @@
                                 </td>
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="{% url 'branches:medication_batches_detail' branch.pk stock.pk %}" class="btn btn-sm btn-outline-info" title="Ver Lotes">
+                                        <!-- Link para medication_batches_detail removido - funcionalidade de lotes removida -->
                                             <i class="fas fa-pills"></i>
                                         </a>
                                         <button class="btn btn-sm btn-outline-primary" onclick="updateStock({{ stock.pk }}, '{{ stock.medication.name }}', {{ stock.quantity }})" title="Atualizar Estoque">

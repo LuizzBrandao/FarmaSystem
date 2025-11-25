@@ -20,9 +20,9 @@ class MedicationAdmin(admin.ModelAdmin):
 
 @admin.register(Stock)
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['medication', 'quantity', 'expiry_date', 'batch_number', 'entry_date']
+    list_display = ['medication', 'quantity', 'expiry_date', 'entry_date']
     list_filter = ['expiry_date', 'entry_date', 'is_active']
-    search_fields = ['medication__name', 'batch_number']
+    search_fields = ['medication__name']
     ordering = ['-entry_date']
 
 

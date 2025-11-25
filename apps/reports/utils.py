@@ -1,5 +1,6 @@
 from io import BytesIO
 from datetime import datetime
+from django.utils import timezone
 from django.http import HttpResponse
 from django.template.loader import get_template
 from reportlab.lib import colors
@@ -66,7 +67,7 @@ class PDFReportGenerator:
     def add_info_section(self, story, data):
         """Adicionar seção de informações gerais"""
         info_data = [
-            ['Data de Geração:', datetime.now().strftime('%d/%m/%Y %H:%M:%S')],
+            ['Data de Geração:', timezone.localtime().strftime('%d/%m/%Y %H:%M:%S')],
             ['Sistema:', 'FarmaSystem - Gestão de Farmácia'],
         ]
         
@@ -172,11 +173,10 @@ class PDFReportGenerator:
             subheader_style = self.create_subheader_style()
             story.append(Paragraph("🚨 Medicamentos Vencidos", subheader_style))
             
-            data = [['Medicamento', 'Lote', 'Quantidade', 'Data de Vencimento']]
+            data = [['Medicamento', 'Quantidade', 'Data de Vencimento']]
             for item in expired:
                 data.append([
                     item.medication.name,
-                    item.batch_number,
                     str(item.quantity),
                     item.expiry_date.strftime('%d/%m/%Y')
                 ])
@@ -199,16 +199,15 @@ class PDFReportGenerator:
         if near_expiry:
             story.append(Paragraph("⚠️ Próximos ao Vencimento (30 dias)", subheader_style))
             
-            data = [['Medicamento', 'Lote', 'Quantidade', 'Data de Vencimento']]
+            data = [['Medicamento', 'Quantidade', 'Data de Vencimento']]
             for item in near_expiry:
                 data.append([
                     item.medication.name,
-                    item.batch_number,
                     str(item.quantity),
                     item.expiry_date.strftime('%d/%m/%Y')
                 ])
             
-            table = Table(data, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1.5*inch])
+            table = Table(data, colWidths=[3*inch, 1*inch, 2*inch])
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), self.warning_color),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),

@@ -123,6 +123,13 @@
                         <div class="branch-role">
                             <span class="role-badge origin">Origem</span>
                         </div>
+                        {% if from_stock %}
+                        <div class="stock-info" id="from-stock-info" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                            <p><strong>Estoque Atual:</strong> {{ from_stock.quantity }} unidades</p>
+                            <p><strong>Disponível:</strong> {{ from_stock.available_quantity }} unidades</p>
+                            <p><strong>Reservado:</strong> {{ from_stock.reserved_quantity }} unidades</p>
+                        </div>
+                        {% endif %}
                     </div>
                     
                     <!-- Seta de Transferência -->
@@ -147,6 +154,13 @@
                         <div class="branch-role">
                             <span class="role-badge destination">Destino</span>
                         </div>
+                        {% if to_stock %}
+                        <div class="stock-info" id="to-stock-info">
+                            <p><strong>Estoque Atual:</strong> {{ to_stock.quantity }} unidades</p>
+                            <p><strong>Disponível:</strong> {{ to_stock.available_quantity }} unidades</p>
+                            <p><strong>Reservado:</strong> {{ to_stock.reserved_quantity }} unidades</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -483,6 +497,30 @@ function approveTransfer() {
         form.submit();
     }
 }
+
+// Sincronizar estoque após aprovação
+function syncStock(branchPk, medicationPk, elementId) {
+    fetch(`{% url "branches:api_stock_sync" 0 0 %}`.replace('0/0', branchPk + '/' + medicationPk))
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const element = document.getElementById(elementId);
+                if (element) {
+                    element.textContent = `Quantidade: ${data.quantity} | Disponível: ${data.available_quantity}`;
+                }
+            }
+        })
+        .catch(error => console.error('Erro ao sincronizar estoque:', error));
+}
+
+// Sincronizar estoques quando a página carregar (se transferência foi concluída)
+{% if transfer.status == 'completed' and from_stock and to_stock %}
+document.addEventListener('DOMContentLoaded', function() {
+    // Atualizar informações de estoque
+    syncStock({{ transfer.from_branch.pk }}, {{ transfer.medication.pk }}, 'from-stock-info');
+    syncStock({{ transfer.to_branch.pk }}, {{ transfer.medication.pk }}, 'to-stock-info');
+});
+{% endif %}
 </script>
 {% endif %}
 {% endblock %}

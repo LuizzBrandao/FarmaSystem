@@ -65,3 +65,190 @@ Traceback (most recent call last):
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
 WARNING 2025-09-24 11:11:02,517 pdf_generator 23232 23156 Gerando PDF de erro para: Relatório de Vencimentos
+INFO 2025-11-06 21:41:07,658 pdf_generator 18724 23068 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-06 21:41:55,229 pdf_generator 18724 17636 Iniciando geração do relatório de estoque
+DEBUG 2025-11-06 21:41:55,230 pdf_generator 18724 17636 Buscando dados de estoque otimizados
+DEBUG 2025-11-06 21:41:55,256 pdf_generator 18724 17636 Dados de estoque coletados: 9 medicamentos
+ERROR 2025-11-06 21:41:55,256 pdf_generator 18724 17636 Erro na geração do PDF de estoque: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\com pdf top\apps\reports\pdf_generator.py", line 96, in generate_stock_report_pdf
+    return self._generate_with_reportlab_stock(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+WARNING 2025-11-06 21:41:55,261 pdf_generator 18724 17636 Gerando PDF de erro para: Relatório de Estoque
+INFO 2025-11-14 11:04:32,129 pdf_generator 23208 7980 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 11:06:25,820 pdf_generator 23208 6828 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 11:06:25,820 pdf_generator 23208 6828 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 11:06:25,836 pdf_generator 23208 6828 Dados de estoque coletados: 9 medicamentos
+ERROR 2025-11-14 11:06:25,836 pdf_generator 23208 6828 Erro na geração do PDF de estoque: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\FarmaSystem\apps\reports\pdf_generator.py", line 96, in generate_stock_report_pdf
+    return self._generate_with_reportlab_stock(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+WARNING 2025-11-14 11:06:25,854 pdf_generator 23208 6828 Gerando PDF de erro para: Relatório de Estoque
+INFO 2025-11-14 12:00:47,209 pdf_generator 5844 21088 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:09:35,986 pdf_generator 22380 19928 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:11:57,962 pdf_generator 5112 22508 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:12:28,429 pdf_generator 22996 21668 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:14:24,989 pdf_generator 6120 22308 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:18:34,316 pdf_generator 21300 22700 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:18:38,527 pdf_generator 1480 7432 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 12:21:08,462 pdf_generator 20020 21076 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:00:04,973 pdf_generator 17636 23304 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:01:18,370 pdf_generator 6284 23432 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:03:38,643 pdf_generator 12992 3460 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:28:17,690 pdf_generator 6284 8600 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 13:28:17,691 pdf_generator 6284 8600 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 13:28:17,696 pdf_generator 6284 8600 Dados de estoque coletados: 0 medicamentos
+ERROR 2025-11-14 13:28:17,696 pdf_generator 6284 8600 Erro na geração do PDF de estoque: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\FarmaSystem\apps\reports\pdf_generator.py", line 96, in generate_stock_report_pdf
+    return self._generate_with_reportlab_stock(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+WARNING 2025-11-14 13:28:17,702 pdf_generator 6284 8600 Gerando PDF de erro para: Relatório de Estoque
+INFO 2025-11-14 13:31:49,875 pdf_generator 14316 23584 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:34:47,228 pdf_generator 14316 19576 Iniciando geração do relatório de vencimentos
+DEBUG 2025-11-14 13:34:47,228 pdf_generator 14316 19576 Buscando dados de vencimento até 2025-12-14
+ERROR 2025-11-14 13:34:47,232 pdf_generator 14316 19576 Erro na geração do PDF de vencimentos: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\FarmaSystem\apps\reports\pdf_generator.py", line 174, in generate_expiration_report_pdf
+    return self._generate_with_reportlab_expiration(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_expiration'
+WARNING 2025-11-14 13:34:47,254 pdf_generator 14316 19576 Gerando PDF de erro para: Relatório de Vencimentos
+INFO 2025-11-14 13:34:53,974 pdf_generator 14316 19576 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-14 13:34:53,974 pdf_generator 14316 19576 Buscando movimentações de 2025-10-15 16:34:53.974762+00:00 até 2025-11-14 16:34:53.974762+00:00
+DEBUG 2025-11-14 13:34:53,978 pdf_generator 14316 19576 Movimentações coletadas: 2 registros
+ERROR 2025-11-14 13:34:53,978 pdf_generator 14316 19576 Erro na geração do PDF de movimentações: 'PDFGenerator' object has no attribute '_generate_with_reportlab_movements'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\FarmaSystem\apps\reports\pdf_generator.py", line 137, in generate_movements_report_pdf
+    return self._generate_with_reportlab_movements(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_movements'
+WARNING 2025-11-14 13:34:53,979 pdf_generator 14316 19576 Gerando PDF de erro para: Relatório de Movimentações
+INFO 2025-11-14 13:44:58,476 pdf_generator 23656 24120 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:48:36,928 pdf_generator 5700 24528 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:49:35,626 pdf_generator 5700 14888 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 13:49:35,627 pdf_generator 5700 14888 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 13:49:35,649 pdf_generator 5700 14888 Dados de estoque coletados: 5 medicamentos
+ERROR 2025-11-14 13:49:35,649 pdf_generator 5700 14888 Erro na geração do PDF de estoque: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\FarmaSystem\apps\reports\pdf_generator.py", line 96, in generate_stock_report_pdf
+    return self._generate_with_reportlab_stock(context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'PDFGenerator' object has no attribute '_generate_with_reportlab_stock'
+WARNING 2025-11-14 13:49:35,652 pdf_generator 5700 14888 Gerando PDF de erro para: Relatório de Estoque
+INFO 2025-11-14 13:55:53,846 pdf_generator 9644 17544 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:55:53,914 pdf_generator 18344 2624 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:55:53,941 pdf_generator 13796 12556 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:57:24,321 pdf_generator 5868 24080 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 13:59:16,607 pdf_generator 22172 21788 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:01:01,471 pdf_generator 9644 21064 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 14:01:01,472 pdf_generator 9644 21064 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 14:01:01,486 pdf_generator 9644 21064 Dados de estoque coletados: 5 medicamentos
+INFO 2025-11-14 14:01:01,536 pdf_generator 9644 21064 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 14:01:01,537 pdf_generator 9644 21064 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 14:01:01,543 pdf_generator 9644 21064 Dados de estoque coletados: 5 medicamentos
+INFO 2025-11-14 14:01:59,522 pdf_generator 9644 19424 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 14:01:59,523 pdf_generator 9644 19424 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 14:01:59,529 pdf_generator 9644 19424 Dados de estoque coletados: 5 medicamentos
+INFO 2025-11-14 14:02:04,628 pdf_generator 9644 19424 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 14:02:04,629 pdf_generator 9644 19424 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 14:02:04,635 pdf_generator 9644 19424 Dados de estoque coletados: 5 medicamentos
+INFO 2025-11-14 14:02:54,955 pdf_generator 9644 9572 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-14 14:02:54,956 pdf_generator 9644 9572 Buscando movimentações de 2025-10-15 17:02:54.956304+00:00 até 2025-11-14 17:02:54.956304+00:00
+DEBUG 2025-11-14 14:02:54,964 pdf_generator 9644 9572 Movimentações coletadas: 2 registros
+INFO 2025-11-14 14:03:00,084 pdf_generator 9644 9572 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-14 14:03:00,085 pdf_generator 9644 9572 Buscando movimentações de 2025-10-15 17:03:00.085342+00:00 até 2025-11-14 17:03:00.085342+00:00
+DEBUG 2025-11-14 14:03:00,089 pdf_generator 9644 9572 Movimentações coletadas: 2 registros
+INFO 2025-11-14 14:03:30,606 pdf_generator 9644 468 Iniciando geração do relatório de vencimentos
+DEBUG 2025-11-14 14:03:30,607 pdf_generator 9644 468 Buscando dados de vencimento até 2025-12-14
+INFO 2025-11-14 14:04:45,757 pdf_generator 296 18776 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:04:45,758 pdf_generator 23020 22748 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:04:46,360 pdf_generator 24524 23044 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:05:36,663 pdf_generator 24560 23608 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:05:36,768 pdf_generator 2432 8808 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:05:36,797 pdf_generator 9608 14340 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:06:12,806 pdf_generator 25272 24884 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:06:13,013 pdf_generator 26272 25580 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:06:13,089 pdf_generator 17124 10972 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:07:10,136 pdf_generator 25272 25956 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 14:07:10,137 pdf_generator 25272 25956 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 14:07:10,150 pdf_generator 25272 25956 Dados de estoque coletados: 5 medicamentos
+INFO 2025-11-14 14:07:45,497 pdf_generator 25272 25956 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-14 14:07:45,497 pdf_generator 25272 25956 Buscando movimentações de 2025-10-15 17:07:45.497904+00:00 até 2025-11-14 17:07:45.497904+00:00
+DEBUG 2025-11-14 14:07:45,501 pdf_generator 25272 25956 Movimentações coletadas: 2 registros
+INFO 2025-11-14 14:08:17,418 pdf_generator 25272 25956 Iniciando geração do relatório de vencimentos
+DEBUG 2025-11-14 14:08:17,419 pdf_generator 25272 25956 Buscando dados de vencimento até 2025-12-14
+INFO 2025-11-14 14:09:06,441 pdf_generator 25272 25956 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-14 14:09:06,442 pdf_generator 25272 25956 Buscando movimentações de 2025-10-15 17:09:06.442779+00:00 até 2025-11-14 17:09:06.442779+00:00
+DEBUG 2025-11-14 14:09:06,447 pdf_generator 25272 25956 Movimentações coletadas: 3 registros
+INFO 2025-11-14 14:14:36,054 pdf_generator 23956 26072 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:14:36,211 pdf_generator 25756 19776 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:14:36,741 pdf_generator 25352 13588 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:15:17,003 pdf_generator 26060 26576 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:15:17,671 pdf_generator 25572 24096 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:41:31,495 pdf_generator 24800 26076 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:41:31,798 pdf_generator 23228 4000 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:41:31,915 pdf_generator 9948 22872 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:42:10,954 pdf_generator 23140 18708 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:42:51,739 pdf_generator 1316 21204 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:42:51,742 pdf_generator 23540 26300 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:42:51,747 pdf_generator 24864 26112 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:42:51,814 pdf_generator 21676 14544 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-14 14:43:17,128 pdf_generator 1316 7512 Iniciando geração do relatório de estoque
+DEBUG 2025-11-14 14:43:17,129 pdf_generator 1316 7512 Buscando dados de estoque otimizados
+DEBUG 2025-11-14 14:43:17,140 pdf_generator 1316 7512 Dados de estoque coletados: 5 medicamentos
+INFO 2025-11-14 14:43:47,196 pdf_generator 1316 20544 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-14 14:43:47,197 pdf_generator 1316 20544 Buscando movimentações de 2025-10-15 17:43:47.197586+00:00 até 2025-11-14 17:43:47.197586+00:00
+DEBUG 2025-11-14 14:43:47,201 pdf_generator 1316 20544 Movimentações coletadas: 3 registros
+INFO 2025-11-14 14:44:17,251 pdf_generator 1316 5612 Iniciando geração do relatório de vencimentos
+DEBUG 2025-11-14 14:44:17,251 pdf_generator 1316 5612 Buscando dados de vencimento até 2025-12-14
+INFO 2025-11-14 14:46:46,030 pdf_generator 1316 19464 Iniciando geração do relatório de vencimentos
+DEBUG 2025-11-14 14:46:46,031 pdf_generator 1316 19464 Buscando dados de vencimento até 2025-12-14
+INFO 2025-11-14 14:46:51,126 pdf_generator 1316 18988 Iniciando geração do relatório de vencimentos
+DEBUG 2025-11-14 14:46:51,127 pdf_generator 1316 18988 Buscando dados de vencimento até 2025-12-14
+INFO 2025-11-24 21:57:55,016 pdf_generator 2636 4668 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 21:58:18,782 pdf_generator 17568 5452 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:03:47,947 pdf_generator 23756 20836 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:04:04,541 pdf_generator 6404 16048 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:04:56,423 pdf_generator 1396 4336 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:09:28,125 pdf_generator 23292 8512 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:09:39,627 pdf_generator 22104 9644 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:11:55,224 pdf_generator 5540 21160 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:12:48,088 pdf_generator 15464 12712 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:16:34,870 pdf_generator 15672 10400 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:16:37,040 pdf_generator 8420 6312 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:16:53,302 pdf_generator 3932 22692 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:22:15,457 pdf_generator 6596 23276 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:22:17,570 pdf_generator 12900 12516 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:27:35,721 pdf_generator 6268 2564 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:27:39,105 pdf_generator 7824 7856 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:28:39,632 pdf_generator 4740 24364 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:31:56,387 pdf_generator 23276 3532 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:32:02,998 pdf_generator 14568 12516 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:32:11,325 pdf_generator 20340 23340 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:38:16,953 pdf_generator 17772 25520 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:38:20,461 pdf_generator 3460 23764 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:38:22,838 pdf_generator 18448 23176 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:38:31,404 pdf_generator 8020 1096 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:38:33,941 pdf_generator 24092 2792 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:38:37,272 pdf_generator 2400 23624 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:39:12,068 pdf_generator 4012 5040 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:39:23,613 pdf_generator 24248 7920 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:39:28,077 pdf_generator 10468 23764 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:40:28,602 pdf_generator 2896 21432 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:43:31,724 pdf_generator 16332 15900 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:43:33,883 pdf_generator 5784 8288 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:44:11,717 pdf_generator 24128 2132 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:44:27,280 pdf_generator 2768 5028 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:44:44,828 pdf_generator 23028 23984 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:48:03,711 pdf_generator 3812 9632 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:48:34,315 pdf_generator 8828 12660 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:48:46,572 pdf_generator 400 8832 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:49:00,294 pdf_generator 11932 7440 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:49:10,994 pdf_generator 22904 9192 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:49:13,233 pdf_generator 2680 8812 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-24 22:50:08,539 pdf_generator 25204 24512 PDFGenerator inicializado com engine: reportlab

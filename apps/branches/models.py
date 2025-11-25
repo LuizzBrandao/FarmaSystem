@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
@@ -94,24 +95,28 @@ class Branch(models.Model):
     
     @property
     def total_medications(self):
-        """Total de medicamentos únicos na filial"""
-        return self.branch_stocks.values('medication').distinct().count()
+        """Total de medicamentos únicos na filial - sempre calculado do banco"""
+        # Forçar query fresh do banco para garantir sincronização
+        return BranchStock.objects.filter(branch=self).values('medication').distinct().count()
     
     @property
     def total_stock_quantity(self):
-        """Quantidade total de itens em estoque"""
+        """Quantidade total de itens em estoque - sempre calculado do banco"""
         from django.db.models import Sum
-        total = self.branch_stocks.aggregate(
+        # Forçar query fresh do banco para garantir sincronização
+        total = BranchStock.objects.filter(branch=self).aggregate(
             total=Sum('quantity')
         )['total']
         return total or 0
     
     @property
     def low_stock_count(self):
-        """Medicamentos com estoque baixo nesta filial"""
+        """Medicamentos com estoque baixo nesta filial (baseado em available_quantity) - sempre calculado do banco"""
         count = 0
-        for stock in self.branch_stocks.select_related('medication'):
-            if stock.quantity <= stock.medication.minimum_stock:
+        # Forçar query fresh do banco para garantir sincronização
+        for stock in BranchStock.objects.filter(branch=self).select_related('medication'):
+            # Usar available_quantity (quantity - reserved_quantity) para verificar estoque baixo
+            if stock.available_quantity <= stock.medication.minimum_stock:
                 count += 1
         return count
 
@@ -167,59 +172,8 @@ class BranchStock(models.Model):
         """Verifica se está com estoque baixo"""
         return self.available_quantity <= self.medication.minimum_stock
     
-    @property
-    def total_batches(self):
-        """Retorna o total de lotes"""
-        return self.batches.filter(is_active=True).count()
-    
-    @property
-    def expired_batches_count(self):
-        """Conta lotes vencidos"""
-        return sum(1 for batch in self.batches.filter(is_active=True) if batch.is_expired)
-    
-    @property
-    def near_expiry_batches_count(self):
-        """Conta lotes próximos ao vencimento"""
-        return sum(1 for batch in self.batches.filter(is_active=True) if batch.is_near_expiry)
-    
-    @property
-    def expiry_status(self):
-        """Determina o status geral de vencimento do medicamento"""
-        if self.expired_batches_count > 0:
-            return 'expired'
-        elif self.near_expiry_batches_count > 0:
-            return 'near_expiry'
-        else:
-            return 'normal'
-    
-    @property
-    def expiry_status_display(self):
-        """Retorna a descrição do status de vencimento"""
-        status_map = {
-            'normal': 'Normal',
-            'near_expiry': 'Próximo ao Vencimento',
-            'expired': 'Vencido'
-        }
-        return status_map.get(self.expiry_status, 'Normal')
-    
-    @property
-    def expiry_status_class(self):
-        """Retorna a classe CSS para o status"""
-        return f"status-{self.expiry_status.replace('_', '-')}"
-    
-    @property
-    def has_expiry_issues(self):
-        """Verifica se há problemas de vencimento"""
-        return self.expiry_status != 'normal'
-    
-    def get_batches_by_status(self, status):
-        """Retorna lotes filtrados por status de vencimento"""
-        return [batch for batch in self.batches.filter(is_active=True) if batch.expiry_status == status]
-    
-    def get_earliest_expiry_batch(self):
-        """Retorna o lote com vencimento mais próximo"""
-        active_batches = self.batches.filter(is_active=True).order_by('expiry_date')
-        return active_batches.first() if active_batches.exists() else None
+    # Propriedades relacionadas a lotes foram removidas
+    # Funcionalidade de lotes removida do sistema
 
 
 class StockTransfer(models.Model):
@@ -309,136 +263,5 @@ class StockTransfer(models.Model):
     def __str__(self):
         return f"{self.medication.name}: {self.from_branch.code} → {self.to_branch.code}"
 
-
-class BranchMedicationBatch(models.Model):
-    """Modelo para lotes de medicamentos por filial"""
-    
-    EXPIRY_STATUS_CHOICES = [
-        ('normal', 'Normal'),
-        ('near_expiry', 'Próximo ao Vencimento'),
-        ('expired', 'Vencido'),
-    ]
-    
-    branch_stock = models.ForeignKey(
-        BranchStock,
-        on_delete=models.CASCADE,
-        related_name='batches',
-        verbose_name='Estoque da Filial'
-    )
-    
-    batch_number = models.CharField(
-        max_length=50,
-        verbose_name='Número do Lote'
-    )
-    
-    quantity = models.PositiveIntegerField(
-        verbose_name='Quantidade do Lote'
-    )
-    
-    manufacturing_date = models.DateField(
-        verbose_name='Data de Fabricação',
-        null=True,
-        blank=True
-    )
-    
-    expiry_date = models.DateField(
-        verbose_name='Data de Vencimento'
-    )
-    
-    purchase_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name='Preço de Compra',
-        null=True,
-        blank=True
-    )
-    
-    supplier_reference = models.CharField(
-        max_length=100,
-        verbose_name='Referência do Fornecedor',
-        blank=True,
-        null=True
-    )
-    
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name='Lote Ativo'
-    )
-    
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Criado em'
-    )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name='Atualizado em'
-    )
-    
-    class Meta:
-        verbose_name = 'Lote de Medicamento'
-        verbose_name_plural = 'Lotes de Medicamentos'
-        unique_together = ('branch_stock', 'batch_number')
-        ordering = ['expiry_date', 'batch_number']
-    
-    def __str__(self):
-        return f"{self.batch_number} - {self.branch_stock.medication.name} ({self.branch_stock.branch.name})"
-    
-    @property
-    def days_until_expiry(self):
-        """Calcula quantos dias faltam para o vencimento"""
-        if not self.expiry_date:
-            return None
-        
-        today = timezone.now().date()
-        delta = self.expiry_date - today
-        return delta.days
-    
-    @property
-    def expiry_status(self):
-        """Determina o status de vencimento do lote"""
-        days = self.days_until_expiry
-        
-        if days is None:
-            return 'normal'
-        
-        if days < 0:
-            return 'expired'
-        elif days <= 30:  # 30 dias para vencimento
-            return 'near_expiry'
-        else:
-            return 'normal'
-    
-    @property
-    def expiry_status_display(self):
-        """Retorna a descrição do status de vencimento"""
-        status_map = {
-            'normal': 'Normal',
-            'near_expiry': 'Próximo ao Vencimento',
-            'expired': 'Vencido'
-        }
-        return status_map.get(self.expiry_status, 'Normal')
-    
-    @property
-    def expiry_status_class(self):
-        """Retorna a classe CSS para o status"""
-        return f"status-{self.expiry_status.replace('_', '-')}"
-    
-    @property
-    def is_expired(self):
-        """Verifica se o lote está vencido"""
-        return self.expiry_status == 'expired'
-    
-    @property
-    def is_near_expiry(self):
-        """Verifica se o lote está próximo ao vencimento"""
-        return self.expiry_status == 'near_expiry'
-    
-    def get_expiry_alert_level(self):
-        """Retorna o nível de alerta para o vencimento"""
-        if self.is_expired:
-            return 'danger'
-        elif self.is_near_expiry:
-            return 'warning'
-        else:
-            return 'success'
+# Modelo BranchMedicationBatch foi removido
+# A funcionalidade de lotes foi completamente removida do sistema

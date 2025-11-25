@@ -4,7 +4,12 @@
  */
 
 // Utilitários
-const utils = {
+(function() {
+    if (window.DashboardModerno && window.DashboardModerno.__initialized) {
+        return;
+    }
+
+    const mdUtils = {
     // Debounce para otimizar eventos
     debounce: (func, wait) => {
         let timeout;
@@ -53,7 +58,7 @@ const AnimationManager = {
                     if (entry.target.hasAttribute('data-count')) {
                         const target = parseInt(entry.target.getAttribute('data-count'));
                         const duration = parseInt(entry.target.getAttribute('data-duration')) || 1500;
-                        utils.animateCounter(entry.target, target, duration);
+                        mdUtils.animateCounter(entry.target, target, duration);
                     }
                 }
             });
@@ -111,7 +116,7 @@ const SearchManager = {
         
         searchInputs.forEach(input => {
             const target = input.getAttribute('data-search-target');
-            const searchFunction = utils.debounce((query) => {
+            const searchFunction = mdUtils.debounce((query) => {
                 SearchManager.filterElements(target, query);
             }, 300);
             
@@ -284,7 +289,7 @@ const AppStateManager = {
             Object.entries(metrics).forEach(([key, value]) => {
                 const element = document.querySelector(`.metric-card.${key} .metric-value`);
                 if (element) {
-                    utils.animateCounter(element, value, 1000);
+                    mdUtils.animateCounter(element, value, 1000);
                 }
             });
 
@@ -403,10 +408,47 @@ DashboardInit.init();
 
 // Exportar para uso global
 window.DashboardModerno = {
-    utils,
+    utils: mdUtils,
     AnimationManager,
     SearchManager,
     ToastManager,
     AppStateManager,
-    ThemeManager
+    ThemeManager,
+    init: DashboardInit.init,
+    animateCounter: mdUtils.animateCounter,
+    __initialized: true
 };
+})();
+
+// Compatibilidade: se o objeto global já existir sem init (por cache/versão antiga), definir um init seguro
+if (window.DashboardModerno && typeof window.DashboardModerno.init !== 'function') {
+    window.DashboardModerno.init = function() {
+        try {
+            // Executa apenas se os managers estiverem disponíveis
+            if (window.DashboardModerno.ThemeManager && window.DashboardModerno.ThemeManager.applyStoredTheme) {
+                window.DashboardModerno.ThemeManager.applyStoredTheme();
+            }
+            if (window.DashboardModerno.AnimationManager) {
+                if (window.DashboardModerno.AnimationManager.setupFadeInAnimations) {
+                    window.DashboardModerno.AnimationManager.setupFadeInAnimations();
+                }
+                if (window.DashboardModerno.AnimationManager.setupHoverEffects) {
+                    window.DashboardModerno.AnimationManager.setupHoverEffects();
+                }
+            }
+            if (window.DashboardModerno.SearchManager && window.DashboardModerno.SearchManager.setupSearch) {
+                window.DashboardModerno.SearchManager.setupSearch();
+            }
+            if (window.DashboardModerno.ToastManager && window.DashboardModerno.ToastManager.init) {
+                window.DashboardModerno.ToastManager.init();
+            }
+            if (window.DashboardModerno.AppStateManager && window.DashboardModerno.AppStateManager.updateMetrics) {
+                setInterval(window.DashboardModerno.AppStateManager.updateMetrics, 5 * 60 * 1000);
+            }
+            // No-op fallback concluído
+            console.log('DashboardModerno.init (fallback) executado');
+        } catch (e) {
+            console.warn('Fallback init falhou:', e);
+        }
+    };
+}

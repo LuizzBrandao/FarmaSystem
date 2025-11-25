@@ -2,7 +2,7 @@
 
 {% block title %}Dashboard de Filiais - Sistema de Farmácia{% endblock %}
 
-{% block nav_branches %}active{% endblock %}
+{% block nav_estoque %}active{% endblock %}
 
 {% load static %}
 
@@ -12,7 +12,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% load static %}{% static 'js/modern-dashboard.js' %}"></script>
+<script src="{% load static %}{% static 'js/modern-dashboard.js' %}?v=20251114"></script>
 {% endblock %}
 
 {% block breadcrumb_items %}
@@ -142,17 +142,17 @@
                                 {% endif %}
                             </div>
                             
-                            <div class="branch-stats">
+                            <div class="branch-stats" data-branch-id="{{ branch.pk }}">
                                 <div class="stat">
-                                    <span class="stat-value">{{ branch.total_stock_quantity|default:0 }}</span>
+                                    <span class="stat-value" data-stat="stock">{{ branch.total_stock_quantity|default:0 }}</span>
                                     <span class="stat-label">Unidades</span>
                                 </div>
                                 <div class="stat">
-                                    <span class="stat-value">{{ branch.total_medications|default:0 }}</span>
+                                    <span class="stat-value" data-stat="medications">{{ branch.total_medications|default:0 }}</span>
                                     <span class="stat-label">Medicamentos</span>
                                 </div>
                                 <div class="stat {% if branch.low_stock_count > 0 %}warning{% endif %}">
-                                    <span class="stat-value">{{ branch.low_stock_count|default:0 }}</span>
+                                    <span class="stat-value" data-stat="low-stock">{{ branch.low_stock_count|default:0 }}</span>
                                     <span class="stat-label">Estoque Baixo</span>
                                 </div>
                             </div>

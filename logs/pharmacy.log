@@ -4,3 +4,16 @@ INFO 2025-09-20 14:23:43,049 services 25976 25728 WhatsApp enviado para +5511999
 ERROR 2025-09-20 14:23:45,259 services 25976 25728 Erro ao enviar email: (530, b'5.7.0 Authentication Required. For more information, go to\n5.7.0  https://support.google.com/accounts/troubleshooter/2402620. d2e1a72fcca58-77cfe75ef24sm8434876b3a.55 - gsmtp', 'webmaster@localhost')
 WARNING 2025-09-20 14:23:45,277 services 25976 25728 Configurações do WhatsApp não definidas
 INFO 2025-09-20 14:23:45,290 services 25976 25728 WhatsApp enviado para +5511999998888
+ERROR 2025-11-14 11:07:42,022 services 23208 4444 Erro ao enviar email: (530, b'5.7.0 Authentication Required. For more information, go to\n5.7.0  https://support.google.com/accounts/troubleshooter/2402620. a92af1059eb24-11b060885eesm10123643c88.1 - gsmtp', 'webmaster@localhost')
+ERROR 2025-11-14 11:07:43,393 services 23208 6828 Erro ao enviar email: (530, b'5.7.0 Authentication Required. For more information, go to\n5.7.0  https://support.google.com/accounts/troubleshooter/2402620. 5a478bee46e88-2a49db4a36asm8220246eec.5 - gsmtp', 'webmaster@localhost')
+ERROR 2025-11-14 13:33:42,244 services 14316 19576 Template não encontrado: transfer_request
+ERROR 2025-11-14 13:34:12,730 services 14316 19576 Template não encontrado: transfer_request
+ERROR 2025-11-14 14:08:45,238 services 25272 25956 Template não encontrado: transfer_request
+ERROR 2025-11-14 14:46:26,098 services 1316 23104 Template não encontrado: transfer_request
+ERROR 2025-11-14 14:46:26,128 services 1316 23104 Template não encontrado: transfer_request
+ERROR 2025-11-14 14:46:26,157 services 1316 23104 Template não encontrado: transfer_request
+ERROR 2025-11-14 14:46:26,179 services 1316 23104 Template não encontrado: transfer_request
+ERROR 2025-11-14 14:46:26,198 services 1316 23104 Template não encontrado: transfer_request
+ERROR 2025-11-24 22:52:07,215 services 25204 5200 Template não encontrado: transfer_request
+ERROR 2025-11-24 22:52:56,313 services 25204 10548 Template não encontrado: transfer_request
+ERROR 2025-11-24 22:53:32,931 services 25204 10548 Template não encontrado: transfer_request

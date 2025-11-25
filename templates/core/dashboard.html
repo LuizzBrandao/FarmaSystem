@@ -26,9 +26,9 @@
                 <span class="subtitle">Sistema Unificado de Controle Farmacêutico</span>
             </h1>
             <div class="header-actions">
-                <a href="{% url 'core:estoque' %}" class="btn-modern btn-primary">
+                <a href="{% url 'branches:branch_list' %}" class="btn-modern btn-primary">
                     <i class="fas fa-cubes"></i>
-                    Estoque Completo
+                    Estoque por Filial
                 </a>
             </div>
         </div>
@@ -44,7 +44,7 @@
                 <h4>{{ alert.message }}</h4>
                 <p>Requer atenção imediata</p>
             </div>
-            <a href="{% url 'core:unified_stock' %}?expiry_status={{ alert.type }}" class="alert-action">
+            <a href="{% url 'inventory:alert_list' %}" class="alert-action">
                 <i class="fas fa-arrow-right"></i>
             </a>
         </div>
@@ -64,7 +64,7 @@
             <div class="metric-value">{{ total_batches }}</div>
             <div class="metric-label">Total no Sistema</div>
             <div class="metric-link">
-                <a href="{% url 'core:unified_stock' %}">Ver Todos</a>
+                <a href="{% url 'branches:dashboard' %}">Ver Estoque por Filial</a>
             </div>
         </div>
         
@@ -78,7 +78,7 @@
             <div class="metric-value">{{ total_locations }}</div>
             <div class="metric-label">Ativas com Estoque</div>
             <div class="metric-link">
-                <a href="{% url 'core:unified_stock' %}">Gerenciar</a>
+                <a href="{% url 'branches:dashboard' %}">Gerenciar Filiais</a>
             </div>
         </div>
         
@@ -137,7 +137,7 @@
                             <div class="stat-value">{{ near_expiry_count }}</div>
                             <div class="stat-label">Próximo Vencimento</div>
                         </div>
-                        <a href="{% url 'core:unified_stock' %}?expiry_status=near_expiry" class="stat-link">
+                        <a href="{% url 'inventory:alert_list' %}" class="stat-link">
                             <i class="fas fa-arrow-right"></i>
                         </a>
                     </div>
@@ -150,7 +150,7 @@
                             <div class="stat-value">{{ expired_count }}</div>
                             <div class="stat-label">Vencidos</div>
                         </div>
-                        <a href="{% url 'core:unified_stock' %}?expiry_status=expired" class="stat-link">
+                        <a href="{% url 'inventory:alert_list' %}" class="stat-link">
                             <i class="fas fa-arrow-right"></i>
                         </a>
                     </div>
@@ -175,13 +175,13 @@
                     </div>
                     
                     <div class="summary-actions">
-                        <a href="{% url 'core:complete_stock' %}" class="btn-modern btn-outline">
+                        <a href="{% url 'branches:dashboard' %}" class="btn-modern btn-outline">
                             <i class="fas fa-eye"></i>
-                            Ver Estoque Completo
+                            Ver Estoque por Filial
                         </a>
-                        <a href="{% url 'core:consistency_report' %}" class="btn-modern btn-outline">
+                        <a href="{% url 'core:system_integrity' %}" class="btn-modern btn-outline">
                             <i class="fas fa-clipboard-check"></i>
-                            Relatório de Consistência
+                            Integridade do Sistema
                         </a>
                     </div>
                 </div>
@@ -196,13 +196,13 @@
         </div>
         <div class="card-body">
             <div class="quick-actions-grid">
-                <a href="{% url 'core:estoque' %}" class="quick-action-card">
+                <a href="{% url 'branches:branch_list' %}" class="quick-action-card">
                     <div class="action-icon">
                         <i class="fas fa-cubes"></i>
                     </div>
                     <div class="action-content">
                         <h4>Estoque</h4>
-                        <p>Vista consolidada de todos os lotes</p>
+                        <p>Controle de estoque por filial</p>
                     </div>
                 </a>
                 
@@ -527,6 +527,6 @@
 </style>
 
 {% block extra_js %}
-<script src="{% static 'js/modern-dashboard.js' %}"></script>
+<script src="{% static 'js/modern-dashboard.js' %}?v=20251114"></script>
 {% endblock %}
 {% endblock %}

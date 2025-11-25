@@ -1,6 +1,5 @@
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 import json
@@ -10,11 +9,23 @@ from .notifications import NotificationManager, get_dashboard_stats
 @login_required
 @require_http_methods(["GET"])
 def get_notifications(request):
-    """API para obter notificações do usuário"""
+    """API para obter notificações do usuário (filtrando as já marcadas como lidas na sessão)"""
     try:
         manager = NotificationManager(user=request.user)
-        notifications = manager.get_all_notifications()
-        counts = manager.get_notification_counts()
+        all_notifications = manager.get_all_notifications()
+
+        # Filtrar notificações já marcadas como lidas (armazenadas na sessão)
+        read_ids = set(request.session.get('read_notifications', []))
+        notifications = [n for n in all_notifications if n.get('id') not in read_ids]
+
+        # Recalcular contagens após filtro
+        counts = {
+            'total': len(notifications),
+            'danger': len([n for n in notifications if n['type'] == 'danger']),
+            'warning': len([n for n in notifications if n['type'] == 'warning']),
+            'info': len([n for n in notifications if n['type'] == 'info']),
+            'success': len([n for n in notifications if n['type'] == 'success']),
+        }
         
         return JsonResponse({
             'success': True,
@@ -50,21 +61,33 @@ def get_critical_notifications(request):
 
 
 @login_required
-@csrf_exempt
 @require_http_methods(["POST"])
 def mark_notification_read(request):
-    """API para marcar notificação como lida"""
+    """API para marcar notificação como lida (individual ou todas), usando sessão do usuário"""
     try:
-        data = json.loads(request.body)
+        data = json.loads(request.body or '{}')
+        read_ids = set(request.session.get('read_notifications', []))
+
+        # Marcar todas como lidas: pega IDs atuais do gerenciador
+        if data.get('all'):
+            manager = NotificationManager(user=request.user)
+            current_notifications = manager.get_all_notifications()
+            for n in current_notifications:
+                if n.get('id'):
+                    read_ids.add(n['id'])
+            request.session['read_notifications'] = list(read_ids)
+            request.session.modified = True
+            return JsonResponse({'success': True, 'message': 'Todas as notificações foram marcadas como lidas', 'marked_count': len(current_notifications)})
+
+        # Marcar uma notificação específica
         notification_id = data.get('notification_id')
+        if notification_id:
+            read_ids.add(notification_id)
+            request.session['read_notifications'] = list(read_ids)
+            request.session.modified = True
+            return JsonResponse({'success': True, 'message': 'Notificação marcada como lida', 'notification_id': notification_id})
         
-        # Aqui você pode implementar a lógica para marcar como lida
-        # Por exemplo, salvar em uma tabela de notificações lidas
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Notificação marcada como lida'
-        })
+        return JsonResponse({'success': False, 'error': 'Dados inválidos'}, status=400)
     except Exception as e:
         return JsonResponse({
             'success': False,

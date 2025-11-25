@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -7,9 +8,13 @@ from .models import Supplier
 @login_required
 def supplier_list(request):
     """Lista de fornecedores"""
+    from django.http import HttpResponse
+    
     suppliers = Supplier.objects.filter(is_active=True)
     context = {'suppliers': suppliers}
-    return render(request, 'suppliers/supplier_list.html', context)
+    response = render(request, 'suppliers/supplier_list.html', context)
+    response['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @login_required
@@ -26,9 +31,13 @@ def supplier_create(request):
 @login_required
 def supplier_detail(request, pk):
     """Detalhes do fornecedor"""
+    from django.http import HttpResponse
+    
     supplier = get_object_or_404(Supplier, pk=pk)
     context = {'supplier': supplier}
-    return render(request, 'suppliers/supplier_detail.html', context)
+    response = render(request, 'suppliers/supplier_detail.html', context)
+    response['Content-Type'] = 'text/html; charset=utf-8'
+    return response
 
 
 @login_required

@@ -22,8 +22,10 @@ try:
     from weasyprint import HTML, CSS
     from weasyprint.text.fonts import FontConfiguration
     PDF_ENGINE = 'weasyprint'
-    print("✅ WeasyPrint disponível - usando como engine principal")
-except ImportError:
+    print("[OK] WeasyPrint disponivel - usando como engine principal")
+except (ImportError, OSError, Exception) as e:
+    # Captura ImportError, OSError (bibliotecas GTK+ não encontradas no Windows)
+    # e qualquer outra exceção durante a importação do WeasyPrint
     try:
         from reportlab.lib.pagesizes import A4, letter
         from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -32,10 +34,11 @@ except ImportError:
         from reportlab.lib import colors
         from reportlab.pdfgen import canvas
         PDF_ENGINE = 'reportlab'
-        print("⚠️ WeasyPrint não disponível - usando ReportLab como fallback")
+        error_msg = str(e)[:100] if e else "erro desconhecido"
+        print(f"[AVISO] WeasyPrint nao disponivel ({type(e).__name__}: {error_msg}) - usando ReportLab como fallback")
     except ImportError:
         PDF_ENGINE = None
-        print("❌ Nenhuma biblioteca PDF disponível - instale WeasyPrint ou ReportLab")
+        print("[ERRO] Nenhuma biblioteca PDF disponivel - instale WeasyPrint ou ReportLab")
 
 # Logger específico para PDFs
 logger = logging.getLogger('apps.reports.pdf')
@@ -57,7 +60,12 @@ class PDFGenerator:
         self.chunk_size = getattr(settings, 'PDF_CHUNK_SIZE', 1000)
         
         if PDF_ENGINE == 'weasyprint':
-            self.font_config = FontConfiguration()
+            try:
+                from weasyprint.text.fonts import FontConfiguration
+                self.font_config = FontConfiguration()
+            except (ImportError, OSError, Exception):
+                # Se FontConfiguration falhar, continuar sem ele
+                self.font_config = None
         
         logger.info(f"PDFGenerator inicializado com engine: {PDF_ENGINE}")
     
@@ -179,42 +187,30 @@ class PDFGenerator:
     
     def _get_stock_data_optimized(self) -> List[Dict]:
         """
-        Buscar dados de estoque com queries otimizadas
+        Buscar dados de estoque com queries otimizadas (sem lotes)
         """
         logger.debug("Buscando dados de estoque otimizados")
         
         try:
-            from apps.core.models import MedicationBatch, BatchLocation
+            from apps.branches.models import BranchStock
             from apps.inventory.models import Medication
             
-            # Query otimizada com agregações
+            # Query otimizada usando BranchStock
             medications = Medication.objects.select_related(
                 'category'
             ).prefetch_related(
-                'unified_batches__locations'
+                'branchstock_set'
             ).annotate(
-                total_quantity=Sum('unified_batches__locations__quantity'),
-                total_reserved=Sum('unified_batches__locations__reserved_quantity'),
-                expired_batches_count=Count(
-                    'unified_batches',
-                    filter=Q(unified_batches__expiry_date__lt=timezone.now().date())
-                ),
-                next_expiry=Min('unified_batches__expiry_date')
+                total_quantity=Sum('branchstock__quantity'),
+                total_reserved=Sum('branchstock__reserved_quantity')
             ).filter(
                 is_active=True
             ).order_by('name')
             
-            # Converter para lista de dicts para otimizar memory usage
+            # Converter para lista de dicts
             result = []
             for med in medications:
                 available = (med.total_quantity or 0) - (med.total_reserved or 0)
-                
-                # Determinar status baseado no vencimento
-                status = 'normal'
-                if med.expired_batches_count > 0:
-                    status = 'expired'
-                elif med.next_expiry and med.next_expiry <= timezone.now().date() + timedelta(days=30):
-                    status = 'near_expiry'
                 
                 result.append({
                     'name': med.name,
@@ -223,9 +219,7 @@ class PDFGenerator:
                     'total_reserved': med.total_reserved or 0,
                     'available_quantity': available,
                     'minimum_stock': med.minimum_stock,
-                    'next_expiry': med.next_expiry,
-                    'expired_batches_count': med.expired_batches_count,
-                    'status': status,
+                    'status': 'normal',
                     'is_low_stock': available <= med.minimum_stock if med.minimum_stock else False,
                 })
             
@@ -321,28 +315,24 @@ class PDFGenerator:
     
     def _get_expiration_data_optimized(self, today, thirty_days_limit) -> Dict:
         """
-        Buscar dados de vencimento otimizados
+        Buscar dados de vencimento otimizados (sem lotes)
         """
         logger.debug(f"Buscando dados de vencimento até {thirty_days_limit}")
         
         try:
-            from apps.core.models import MedicationBatch
+            from apps.inventory.models import Stock
             
-            # Lotes vencidos
-            expired_batches = MedicationBatch.objects.select_related(
+            # Estoque vencido
+            expired_stocks = Stock.objects.select_related(
                 'medication', 'medication__category'
-            ).prefetch_related(
-                'locations'
             ).filter(
                 is_active=True,
                 expiry_date__lt=today
             ).order_by('expiry_date')
             
-            # Lotes próximos ao vencimento
-            near_expiry_batches = MedicationBatch.objects.select_related(
+            # Estoque próximo ao vencimento
+            near_expiry_stocks = Stock.objects.select_related(
                 'medication', 'medication__category'
-            ).prefetch_related(
-                'locations'
             ).filter(
                 is_active=True,
                 expiry_date__gte=today,
@@ -351,29 +341,25 @@ class PDFGenerator:
             
             # Converter para formato otimizado
             expired_data = []
-            for batch in expired_batches:
-                total_quantity = sum(loc.quantity for loc in batch.locations.filter(is_active=True))
-                if total_quantity > 0:  # Só incluir lotes com estoque
+            for stock in expired_stocks:
+                if stock.quantity > 0:
                     expired_data.append({
-                        'batch_number': batch.batch_number,
-                        'medication_name': batch.medication.name,
-                        'category': batch.medication.category.name if batch.medication.category else 'N/A',
-                        'expiry_date': batch.expiry_date,
-                        'total_quantity': total_quantity,
-                        'days_expired': (today - batch.expiry_date).days,
+                        'medication_name': stock.medication.name,
+                        'category': stock.medication.category.name if stock.medication.category else 'N/A',
+                        'expiry_date': stock.expiry_date,
+                        'total_quantity': stock.quantity,
+                        'days_expired': (today - stock.expiry_date).days,
                     })
             
             near_expiry_data = []
-            for batch in near_expiry_batches:
-                total_quantity = sum(loc.quantity for loc in batch.locations.filter(is_active=True))
-                if total_quantity > 0:
+            for stock in near_expiry_stocks:
+                if stock.quantity > 0:
                     near_expiry_data.append({
-                        'batch_number': batch.batch_number,
-                        'medication_name': batch.medication.name,
-                        'category': batch.medication.category.name if batch.medication.category else 'N/A',
-                        'expiry_date': batch.expiry_date,
-                        'total_quantity': total_quantity,
-                        'days_until_expiry': (batch.expiry_date - today).days,
+                        'medication_name': stock.medication.name,
+                        'category': stock.medication.category.name if stock.medication.category else 'N/A',
+                        'expiry_date': stock.expiry_date,
+                        'total_quantity': stock.quantity,
+                        'days_until_expiry': (stock.expiry_date - today).days,
                     })
             
             return {
@@ -428,7 +414,7 @@ class PDFGenerator:
             response = HttpResponse(pdf_buffer.getvalue(), content_type='application/pdf')
             
             # Nome do arquivo com timestamp
-            timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+            timestamp = timezone.localtime().strftime('%Y%m%d_%H%M%S')
             filename = f"{context['report_type']}_{timestamp}.pdf"
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
             
@@ -615,7 +601,7 @@ class PDFGenerator:
             # Error details
             p.setFont("Helvetica", 12)
             p.drawString(100, 700, f"Relatório: {report_title}")
-            p.drawString(100, 670, f"Data: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}")
+            p.drawString(100, 670, f"Data: {timezone.localtime().strftime('%d/%m/%Y %H:%M:%S')}")
             
             # Error message (wrapped)
             p.setFont("Helvetica", 10)
@@ -667,6 +653,234 @@ class PDFGenerator:
             lines.append(' '.join(current_line))
         
         return lines
+
+    def _generate_with_reportlab_stock(self, context: Dict) -> HttpResponse:
+        """
+        Gerar PDF de estoque usando ReportLab (fallback)
+        """
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+
+        # Cabeçalho
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(30, height - 50, context.get('title', 'Relatório de Estoque'))
+        c.setFont("Helvetica", 10)
+        c.drawString(30, height - 70, f"Gerado em: {timezone.localtime().strftime('%d/%m/%Y %H:%M:%S')}")
+        c.drawString(30, height - 85, f"Usuário: {getattr(context.get('user'), 'username', 'N/A')}")
+
+        # Métricas
+        metrics = context.get('metrics', {})
+        y = height - 110
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(30, y, "Resumo do Estoque")
+        y -= 18
+        c.setFont("Helvetica", 10)
+        for label, key in [
+            ("Total de Medicamentos", 'total_medications'),
+            ("Total em Estoque", 'total_stock'),
+            ("Quantidade Disponível", 'total_available'),
+            ("Quantidade Reservada", 'total_reserved'),
+            ("Medicamentos Vencidos", 'expired_medications'),
+            ("Medicamentos Próximos ao Vencimento", 'near_expiry_medications'),
+            ("Medicamentos com Baixo Estoque", 'low_stock_medications'),
+        ]:
+            c.drawString(30, y, f"{label}: {metrics.get(key, 0)}")
+            y -= 14
+
+        # Tabela simples de medicamentos (top 100)
+        y -= 10
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(30, y, "Medicamentos")
+        y -= 18
+        c.setFont("Helvetica", 9)
+        c.drawString(30, y, "Nome")
+        c.drawString(200, y, "Categoria")
+        c.drawString(320, y, "Total")
+        c.drawString(370, y, "Reservado")
+        c.drawString(430, y, "Disponível")
+        c.drawString(500, y, "Status")
+        y -= 12
+        c.line(28, y, width - 28, y)
+        y -= 8
+
+        for med in context.get('medicamentos', [])[:100]:
+            if y < 80:
+                c.showPage()
+                y = height - 60
+            c.setFont("Helvetica", 9)
+            c.drawString(30, y, str(med.get('name', ''))[:28])
+            c.drawString(200, y, str(med.get('category', 'N/A'))[:18])
+            c.drawRightString(355, y, str(med.get('total_quantity', 0)))
+            c.drawRightString(415, y, str(med.get('total_reserved', 0)))
+            c.drawRightString(485, y, str(med.get('available_quantity', 0)))
+            c.drawString(500, y, str(med.get('status', 'normal')))
+            y -= 12
+
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+
+        timestamp = timezone.localtime().strftime('%Y%m%d_%H%M%S')
+        filename = f"stock_{timestamp}.pdf"
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    def _generate_with_reportlab_movements(self, context: Dict) -> HttpResponse:
+        """
+        Gerar PDF de movimentações usando ReportLab (fallback)
+        """
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+
+        # Cabeçalho
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(30, height - 50, context.get('title', 'Relatório de Movimentações'))
+        c.setFont("Helvetica", 10)
+        c.drawString(30, height - 70, f"Período: {context.get('start_date')} até {context.get('end_date')}")
+        c.drawString(30, height - 85, f"Gerado em: {timezone.localtime().strftime('%d/%m/%Y %H:%M:%S')}")
+
+        # Estatísticas
+        stats = context.get('stats', {})
+        y = height - 110
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(30, y, "Resumo das Movimentações")
+        y -= 18
+        c.setFont("Helvetica", 10)
+        for label, key in [
+            ("Total de Movimentações", 'total_movements'),
+            ("Quantidade Total", 'total_quantity'),
+            ("Aprovadas", 'completed_movements'),
+            ("Pendentes", 'pending_movements'),
+            ("Rejeitadas", 'rejected_movements'),
+        ]:
+            c.drawString(30, y, f"{label}: {stats.get(key, 0)}")
+            y -= 14
+
+        # Lista simples (top 200)
+        y -= 10
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(30, y, "Movimentações")
+        y -= 18
+        c.setFont("Helvetica", 9)
+        c.drawString(30, y, "Data")
+        c.drawString(130, y, "Medicamento")
+        c.drawRightString(300, y, "Qtd")
+        c.drawString(330, y, "De")
+        c.drawString(430, y, "Para")
+        c.drawString(530, y, "Status")
+        y -= 12
+        c.line(28, y, width - 28, y)
+        y -= 8
+
+        for mov in context.get('movimentacoes', [])[:200]:
+            if y < 80:
+                c.showPage()
+                y = height - 60
+            c.setFont("Helvetica", 9)
+            date_str = getattr(mov.get('date'), 'strftime', lambda x: str(mov.get('date')))("%d/%m/%Y %H:%M") if mov.get('date') else ""
+            c.drawString(30, y, date_str)
+            c.drawString(130, y, str(mov.get('medication_name', ''))[:24])
+            c.drawRightString(300, y, str(mov.get('quantity', 0)))
+            c.drawString(330, y, str(mov.get('from_location', ''))[:18])
+            c.drawString(430, y, str(mov.get('to_location', ''))[:18])
+            c.drawString(530, y, str(mov.get('status', ''))) 
+            y -= 12
+
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+
+        timestamp = timezone.localtime().strftime('%Y%m%d_%H%M%S')
+        filename = f"movements_{timestamp}.pdf"
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    def _generate_with_reportlab_expiration(self, context: Dict) -> HttpResponse:
+        """
+        Gerar PDF de vencimentos usando ReportLab (fallback)
+        """
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+
+        # Cabeçalho
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(30, height - 50, context.get('title', 'Relatório de Vencimentos'))
+        c.setFont("Helvetica", 10)
+        c.drawString(30, height - 70, f"Data: {timezone.now().strftime('%d/%m/%Y %H:%M:%S')}")
+
+        y = height - 100
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(30, y, "Lotes Vencidos")
+        y -= 18
+        c.setFont("Helvetica", 9)
+        c.drawString(30, y, "Medicamento")
+        c.drawString(300, y, "Categoria")
+        c.drawString(420, y, "Qtde")
+        c.drawString(470, y, "Vencimento")
+        y -= 12
+        c.line(28, y, width - 28, y)
+        y -= 8
+
+        for item in context.get('vencimentos', {}).get('expired', [])[:100]:
+            if y < 80:
+                c.showPage()
+                y = height - 60
+            c.setFont("Helvetica", 9)
+            c.drawString(30, y, str(item.get('medication_name', ''))[:40])
+            c.drawString(300, y, str(item.get('category', ''))[:18])
+            c.drawRightString(450, y, str(item.get('total_quantity', 0)))
+            c.drawString(470, y, str(item.get('expiry_date', '')))
+            y -= 12
+
+        # Próximos ao vencimento
+        y -= 20
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(30, y, "Medicamentos Próximos ao Vencimento")
+        y -= 18
+        c.setFont("Helvetica", 9)
+        c.drawString(30, y, "Medicamento")
+        c.drawString(300, y, "Categoria")
+        c.drawString(420, y, "Qtde")
+        c.drawString(470, y, "Vencimento")
+        y -= 12
+        c.line(28, y, width - 28, y)
+        y -= 8
+
+        for item in context.get('vencimentos', {}).get('near_expiry', [])[:100]:
+            if y < 80:
+                c.showPage()
+                y = height - 60
+            c.setFont("Helvetica", 9)
+            c.drawString(30, y, str(item.get('medication_name', ''))[:40])
+            c.drawString(300, y, str(item.get('category', ''))[:18])
+            c.drawRightString(450, y, str(item.get('total_quantity', 0)))
+            c.drawString(470, y, str(item.get('expiry_date', '')))
+            y -= 12
+
+        c.showPage()
+        c.save()
+        buffer.seek(0)
+
+        timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"expiration_{timestamp}.pdf"
+        response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 # Instância global do gerador

@@ -69,7 +69,7 @@ def stock_report_pdf(request):
         # Registrar no banco apenas se geração foi bem-sucedida
         try:
             Report.objects.create(
-                title=f"Relatório de Estoque - {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+                title=f"Relatório de Estoque - {timezone.localtime().strftime('%d/%m/%Y %H:%M')}",
                 report_type='stock',
                 generated_by=request.user,
                 description="Relatório completo de estoque com métricas consolidadas",
@@ -107,7 +107,7 @@ def movements_report_pdf(request):
         # Registrar no banco
         try:
             Report.objects.create(
-                title=f"Relatório de Movimentações - {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+                title=f"Relatório de Movimentações - {timezone.localtime().strftime('%d/%m/%Y %H:%M')}",
                 report_type='movements',
                 generated_by=request.user,
                 description="Relatório de movimentações dos últimos 30 dias",
@@ -144,7 +144,7 @@ def expiration_report_pdf(request):
         # Registrar no banco
         try:
             Report.objects.create(
-                title=f"Relatório de Vencimentos - {timezone.now().strftime('%d/%m/%Y %H:%M')}",
+                title=f"Relatório de Vencimentos - {timezone.localtime().strftime('%d/%m/%Y %H:%M')}",
                 report_type='expiration',
                 generated_by=request.user,
                 description="Relatório de lotes vencidos e próximos ao vencimento",
@@ -182,7 +182,7 @@ def pdf_status_check(request):
         status = {
             'pdf_engine': PDF_ENGINE,
             'engine_available': PDF_ENGINE is not None,
-            'timestamp': timezone.now().isoformat(),
+            'timestamp': timezone.localtime().isoformat(),
         }
         
         if PDF_ENGINE == 'weasyprint':

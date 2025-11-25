@@ -38,11 +38,10 @@
     
     <!-- Lotes Vencidos -->
     {% if vencimentos.expired %}
-    <h3>Lotes Vencidos ({{ vencimentos.expired_count }})</h3>
+    <h3>Medicamentos Vencidos ({{ vencimentos.expired_count }})</h3>
     <table>
         <thead>
             <tr>
-                <th>Lote</th>
                 <th>Medicamento</th>
                 <th>Categoria</th>
                 <th>Data de Vencimento</th>
@@ -54,7 +53,6 @@
         <tbody>
             {% for item in vencimentos.expired %}
             <tr class="status-expired {% if item.days_expired > 90 %}critical{% elif item.days_expired > 30 %}warning{% endif %}">
-                <td class="font-bold">{{ item.batch_number }}</td>
                 <td>{{ item.medication_name }}</td>
                 <td>{{ item.category }}</td>
                 <td class="text-center">{{ item.expiry_date|date:"d/m/Y" }}</td>
@@ -74,20 +72,19 @@
         </tbody>
     </table>
     {% else %}
-    <h3>Lotes Vencidos</h3>
+    <h3>Medicamentos Vencidos</h3>
     <div class="no-data">
-        <p>✅ Nenhum lote vencido encontrado.</p>
+        <p>✅ Nenhum medicamento vencido encontrado.</p>
     </div>
     {% endif %}
     
     <!-- Lotes Próximos ao Vencimento -->
     {% if vencimentos.near_expiry %}
     <div class="page-break"></div>
-    <h3>Lotes Próximos ao Vencimento ({{ vencimentos.near_expiry_count }})</h3>
+    <h3>Medicamentos Próximos ao Vencimento ({{ vencimentos.near_expiry_count }})</h3>
     <table>
         <thead>
             <tr>
-                <th>Lote</th>
                 <th>Medicamento</th>
                 <th>Categoria</th>
                 <th>Data de Vencimento</th>
@@ -99,7 +96,6 @@
         <tbody>
             {% for item in vencimentos.near_expiry %}
             <tr class="status-near-expiry {% if item.days_until_expiry <= 7 %}critical{% elif item.days_until_expiry <= 15 %}warning{% endif %}">
-                <td class="font-bold">{{ item.batch_number }}</td>
                 <td>{{ item.medication_name }}</td>
                 <td>{{ item.category }}</td>
                 <td class="text-center">{{ item.expiry_date|date:"d/m/Y" }}</td>
@@ -119,9 +115,9 @@
         </tbody>
     </table>
     {% else %}
-    <h3>Lotes Próximos ao Vencimento</h3>
+    <h3>Medicamentos Próximos ao Vencimento</h3>
     <div class="no-data">
-        <p>✅ Nenhum lote próximo ao vencimento encontrado nos próximos 30 dias.</p>
+        <p>✅ Nenhum medicamento próximo ao vencimento encontrado nos próximos 30 dias.</p>
     </div>
     {% endif %}
     
@@ -134,7 +130,7 @@
         <thead>
             <tr>
                 <th>Situação</th>
-                <th>Quantidade de Lotes</th>
+                <th>Quantidade de Medicamentos</th>
                 <th>Quantidade Total</th>
                 <th>Ação Recomendada</th>
             </tr>
@@ -142,7 +138,7 @@
         <tbody>
             {% if vencimentos.expired_count > 0 %}
             <tr class="status-expired">
-                <td class="font-bold">Lotes Vencidos</td>
+                <td class="font-bold">Medicamentos Vencidos</td>
                 <td class="text-right">{{ vencimentos.expired_count }}</td>
                 <td class="text-right">{{ vencimentos.total_expired_quantity }}</td>
                 <td>
@@ -173,7 +169,7 @@
             <tr>
                 <th>Urgência</th>
                 <th>Critério</th>
-                <th>Lotes</th>
+                <th>Medicamentos</th>
                 <th>Ação Imediata</th>
             </tr>
         </thead>
@@ -208,7 +204,7 @@
     <div class="page-break"></div>
     <h3>✅ Status Excelente</h3>
     <div class="no-data">
-        <p><strong>Parabéns!</strong> Não há lotes vencidos ou próximos ao vencimento nos próximos 30 dias.</p>
+        <p><strong>Parabéns!</strong> Não há medicamentos vencidos ou próximos ao vencimento nos próximos 30 dias.</p>
         <p>Continue monitorando regularmente para manter essa excelente gestão de estoque.</p>
     </div>
     {% endif %}

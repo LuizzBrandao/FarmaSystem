@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Script para popular o banco de dados com dados de teste
 Execute: python manage.py shell < populate_data.py

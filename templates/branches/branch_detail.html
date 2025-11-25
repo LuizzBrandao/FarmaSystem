@@ -398,4 +398,44 @@
     font-size: 0.875rem;
 }
 </style>
+
+<script>
+// Sincronizar estatísticas com o banco de dados em tempo real
+document.addEventListener('DOMContentLoaded', function() {
+    function updateBranchStats() {
+        fetch(`{% url 'branches:api_branch_stats' branch.pk %}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Atualizar valores na página
+                    const statCards = document.querySelectorAll('.stat-card .stat-content h3');
+                    if (statCards.length >= 3) {
+                        // Medicamentos (primeiro card)
+                        statCards[0].textContent = data.total_medications;
+                        // Unidades (segundo card)
+                        statCards[1].textContent = data.total_stock_quantity;
+                        // Estoque Baixo (terceiro card)
+                        statCards[2].textContent = data.low_stock_count;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar estatísticas:', error);
+            });
+    }
+    
+    // Atualizar ao carregar a página
+    updateBranchStats();
+    
+    // Atualizar a cada 30 segundos para manter sincronizado
+    setInterval(updateBranchStats, 30000);
+    
+    // Atualizar quando a página receber foco novamente
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            updateBranchStats();
+        }
+    });
+});
+</script>
 {% endblock %}

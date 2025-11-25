@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db.models import Sum, Count
 from django.utils import timezone
-from .models import Branch, BranchStock, StockTransfer, BranchMedicationBatch
+# -*- coding: utf-8 -*-
+from .models import Branch, BranchStock, StockTransfer
+# BranchMedicationBatch foi removido
 from apps.inventory.models import Medication
 from apps.authentication.decorators import farmaceutico_required, admin_required
 from apps.notifications.services import NotificationManager
@@ -20,11 +23,15 @@ def branch_list(request):
 
 @login_required
 def branch_detail(request, pk):
-    """Detalhes de uma filial específica"""
+    """Detalhes de uma filial específica - com cálculos sincronizados do banco"""
     branch = get_object_or_404(Branch, pk=pk)
     
-    # Estatísticas da filial
+    # Estatísticas da filial - calcular diretamente do banco para garantir sincronização
     branch_stocks = BranchStock.objects.filter(branch=branch).select_related('medication')
+    
+    # Calcular totais diretamente do banco (garantir sincronização)
+    total_medications = branch_stocks.values('medication').distinct().count()
+    total_stock_quantity = branch_stocks.aggregate(total=Sum('quantity'))['total'] or 0
     
     # Medicamentos com estoque baixo
     low_stock_items = []
@@ -43,8 +50,8 @@ def branch_detail(request, pk):
         'branch_stocks': branch_stocks,
         'low_stock_items': low_stock_items,
         'recent_transfers': recent_transfers,
-        'total_medications': branch.total_medications,
-        'total_stock': branch.total_stock_quantity,
+        'total_medications': total_medications,  # Calculado diretamente do banco
+        'total_stock': total_stock_quantity,  # Calculado diretamente do banco
         'low_stock_count': len(low_stock_items)
     }
     
@@ -66,10 +73,10 @@ def branch_stock_view(request, branch_pk):
     from apps.inventory.models import Category
     categories = Category.objects.all()
     
-    # Query base com prefetch dos lotes
+    # Query base
     stocks = BranchStock.objects.filter(branch=branch).select_related(
         'medication', 'medication__category'
-    ).prefetch_related('batches')
+    )
     
     # Aplicar filtros
     if search:
@@ -111,70 +118,33 @@ def branch_stock_view(request, branch_pk):
     return render(request, 'branches/branch_stock.html', context)
 
 
+# View medication_batches_detail foi removida - funcionalidade de lotes removida
 @farmaceutico_required
 def medication_batches_detail(request, branch_pk, stock_pk):
-    """Detalhes dos lotes de um medicamento específico"""
-    branch = get_object_or_404(Branch, pk=branch_pk)
-    stock = get_object_or_404(BranchStock, pk=stock_pk, branch=branch)
-    
-    # Buscar todos os lotes ativos ordenados por data de vencimento
-    batches = BranchMedicationBatch.objects.filter(
-        branch_stock=stock,
-        is_active=True
-    ).order_by('expiry_date')
-    
-    # Estatísticas dos lotes
-    total_batches = batches.count()
-    expired_count = sum(1 for batch in batches if batch.is_expired)
-    near_expiry_count = sum(1 for batch in batches if batch.is_near_expiry)
-    normal_count = total_batches - expired_count - near_expiry_count
-    
-    context = {
-        'branch': branch,
-        'stock': stock,
-        'batches': batches,
-        'total_batches': total_batches,
-        'expired_count': expired_count,
-        'near_expiry_count': near_expiry_count,
-        'normal_count': normal_count,
-    }
-    
-    return render(request, 'branches/medication_batches_detail.html', context)
+    """Redireciona para o estoque da filial"""
+    return redirect('branches:branch_stock', branch_pk=branch_pk)
 
 
 @farmaceutico_required
 def branch_expiry_dashboard(request, branch_pk):
-    """Dashboard de vencimentos da filial"""
+    """Dashboard de vencimentos da filial - sem referências a lotes"""
     branch = get_object_or_404(Branch, pk=branch_pk)
     
-    # Buscar todos os stocks com seus lotes
+    # Buscar todos os stocks
     stocks = BranchStock.objects.filter(branch=branch).select_related(
         'medication', 'medication__category'
-    ).prefetch_related('batches')
+    )
     
     # Calcular estatísticas gerais
     total_medications = stocks.count()
     expired_medications = sum(1 for stock in stocks if stock.expiry_status == 'expired')
     near_expiry_medications = sum(1 for stock in stocks if stock.expiry_status == 'near_expiry')
     
-    # Buscar lotes vencidos e próximos ao vencimento
-    all_batches = BranchMedicationBatch.objects.filter(
-        branch_stock__branch=branch,
-        is_active=True
-    ).select_related('branch_stock__medication').order_by('expiry_date')
-    
-    expired_batches = [batch for batch in all_batches if batch.is_expired]
-    near_expiry_batches = [batch for batch in all_batches if batch.is_near_expiry]
-    
     context = {
         'branch': branch,
         'total_medications': total_medications,
         'expired_medications': expired_medications,
         'near_expiry_medications': near_expiry_medications,
-        'expired_batches': expired_batches[:10],  # Primeiros 10
-        'near_expiry_batches': near_expiry_batches[:10],  # Primeiros 10
-        'total_expired_batches': len(expired_batches),
-        'total_near_expiry_batches': len(near_expiry_batches),
     }
     
     return render(request, 'branches/expiry_dashboard.html', context)
@@ -224,72 +194,163 @@ def update_branch_stock(request, branch_pk, medication_pk):
 
 @farmaceutico_required
 def create_transfer(request):
-    """Criar solicitação de transferência entre filiais"""
+    """Criar solicitação de transferência entre filiais com prevenção de duplicidade"""
+    from django.db import transaction
+    from django.db.models import F, Q
+    
     if request.method == 'POST':
         try:
             from_branch_id = request.POST.get('from_branch')
             to_branch_id = request.POST.get('to_branch')
-            medication_id = request.POST.get('medication')
-            quantity = int(request.POST.get('quantity'))
+            transfer_all = request.POST.get('transfer_all') == 'on'
             reason = request.POST.get('reason', '')
-            
+
             # Validações
             if from_branch_id == to_branch_id:
                 messages.error(request, 'Filial de origem deve ser diferente da filial de destino')
                 return redirect('branches:create_transfer')
-            
+
             from_branch = get_object_or_404(Branch, pk=from_branch_id)
             to_branch = get_object_or_404(Branch, pk=to_branch_id)
+
+            # Fluxo de transferência de todos os medicamentos
+            if transfer_all:
+                created_count = 0
+                notification_manager = NotificationManager()
+                
+                with transaction.atomic():
+                    # Itera por todos os estoques da filial de origem com lock
+                    for from_stock in BranchStock.objects.select_for_update().select_related('medication').filter(branch=from_branch):
+                        # Recalcular available_quantity após lock para garantir dados atualizados
+                        available = max(0, from_stock.quantity - from_stock.reserved_quantity)
+                        if available <= 0:
+                            continue
+                        
+                        # Verificar se já existe transferência pendente para evitar duplicidade
+                        existing_transfer = StockTransfer.objects.filter(
+                            from_branch=from_branch,
+                            to_branch=to_branch,
+                            medication=from_stock.medication,
+                            status='pending'
+                        ).exists()
+                        
+                        if existing_transfer:
+                            continue  # Pula se já existe transferência pendente
+                        
+                        # Cria transferência por medicamento
+                        transfer = StockTransfer.objects.create(
+                            from_branch=from_branch,
+                            to_branch=to_branch,
+                            medication=from_stock.medication,
+                            quantity=available,
+                            reason=reason or 'Transferência de todos os medicamentos',
+                            requested_by=request.user
+                        )
+                        # Reserva estoque (usando update() para operação atômica)
+                        BranchStock.objects.filter(pk=from_stock.pk).update(
+                            reserved_quantity=F('reserved_quantity') + available
+                        )
+                        # Notificação
+                        notification_manager.send_transfer_notification(transfer)
+                        created_count += 1
+
+                if created_count == 0:
+                    messages.warning(request, 'Nenhum medicamento com quantidade disponível para transferir na filial de origem.')
+                    return redirect('branches:create_transfer')
+
+                messages.success(request, f'Solicitação criada: {created_count} transferências para todos os medicamentos disponíveis.')
+                return redirect('branches:dashboard')
+
+            # Fluxo de transferência individual (existente)
+            medication_id = request.POST.get('medication')
+            quantity = int(request.POST.get('quantity'))
+
             medication = get_object_or_404(Medication, pk=medication_id)
-            
-            # Verificar se há estoque suficiente na filial de origem
-            try:
-                from_stock = BranchStock.objects.get(branch=from_branch, medication=medication)
-                if from_stock.available_quantity < quantity:
-                    messages.error(
+
+            with transaction.atomic():
+                # Verificar se há estoque suficiente na filial de origem (com lock)
+                try:
+                    from_stock = BranchStock.objects.select_for_update().get(
+                        branch=from_branch, 
+                        medication=medication
+                    )
+                    
+                    # Recalcular available_quantity após lock para garantir dados atualizados
+                    available_qty = max(0, from_stock.quantity - from_stock.reserved_quantity)
+                    
+                    if available_qty < quantity:
+                        messages.error(
+                            request,
+                            f'Estoque insuficiente. Disponível: {available_qty} unidades (Total: {from_stock.quantity}, Reservado: {from_stock.reserved_quantity})'
+                        )
+                        return redirect('branches:create_transfer')
+                    
+                    # Validação adicional: garantir que quantity não seja negativo após reserva
+                    if from_stock.reserved_quantity + quantity > from_stock.quantity:
+                        messages.error(
+                            request,
+                            f'Erro: A quantidade solicitada ({quantity}) excederia o estoque total ({from_stock.quantity}) após considerar as reservas existentes ({from_stock.reserved_quantity}).'
+                        )
+                        return redirect('branches:create_transfer')
+                        
+                except BranchStock.DoesNotExist:
+                    messages.error(request, 'Medicamento não encontrado na filial de origem')
+                    return redirect('branches:create_transfer')
+
+                # Verificar se já existe transferência pendente para evitar duplicidade
+                existing_transfer = StockTransfer.objects.filter(
+                    from_branch=from_branch,
+                    to_branch=to_branch,
+                    medication=medication,
+                    status='pending'
+                ).exists()
+                
+                if existing_transfer:
+                    messages.warning(
                         request,
-                        f'Estoque insuficiente. Disponível: {from_stock.available_quantity} unidades'
+                        'Já existe uma transferência pendente para este medicamento entre estas filiais.'
                     )
                     return redirect('branches:create_transfer')
-            except BranchStock.DoesNotExist:
-                messages.error(request, 'Medicamento não encontrado na filial de origem')
-                return redirect('branches:create_transfer')
-            
-            # Criar transferência
-            transfer = StockTransfer.objects.create(
-                from_branch=from_branch,
-                to_branch=to_branch,
-                medication=medication,
-                quantity=quantity,
-                reason=reason,
-                requested_by=request.user
-            )
-            
-            # Reservar estoque na filial de origem
-            from_stock.reserved_quantity += quantity
-            from_stock.save()
-            
+
+                # Criar transferência
+                transfer = StockTransfer.objects.create(
+                    from_branch=from_branch,
+                    to_branch=to_branch,
+                    medication=medication,
+                    quantity=quantity,
+                    reason=reason,
+                    requested_by=request.user
+                )
+
+                # Reservar estoque na filial de origem (usando update() para operação atômica)
+                BranchStock.objects.filter(pk=from_stock.pk).update(
+                    reserved_quantity=F('reserved_quantity') + quantity
+                )
+
             # Enviar notificação
             notification_manager = NotificationManager()
             notification_manager.send_transfer_notification(transfer)
-            
+
             messages.success(request, 'Solicitação de transferência criada com sucesso!')
             return redirect('branches:transfer_detail', pk=transfer.pk)
-            
+
         except ValueError:
             messages.error(request, 'Dados inválidos fornecidos')
         except Exception as e:
             messages.error(request, f'Erro ao criar transferência: {str(e)}')
-    
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Erro ao criar transferência: {str(e)}', exc_info=True)
+
     # Dados para o formulário
     branches = Branch.objects.filter(is_active=True)
     medications = Medication.objects.filter(is_active=True)
-    
+
     context = {
         'branches': branches,
         'medications': medications
     }
-    
+
     return render(request, 'branches/transfer_form.html', context)
 
 
@@ -297,46 +358,195 @@ def create_transfer(request):
 def transfer_detail(request, pk):
     """Detalhes de uma transferência"""
     transfer = get_object_or_404(StockTransfer, pk=pk)
-    context = {'transfer': transfer}
+    
+    # Buscar estoques atualizados para sincronização
+    try:
+        from_stock = BranchStock.objects.get(
+            branch=transfer.from_branch,
+            medication=transfer.medication
+        )
+        to_stock = BranchStock.objects.filter(
+            branch=transfer.to_branch,
+            medication=transfer.medication
+        ).first()
+    except BranchStock.DoesNotExist:
+        from_stock = None
+        to_stock = None
+    
+    context = {
+        'transfer': transfer,
+        'from_stock': from_stock,
+        'to_stock': to_stock
+    }
     return render(request, 'branches/transfer_detail.html', context)
+
+
+@login_required
+def api_stock_sync(request, branch_pk, medication_pk):
+    """API para sincronizar estoque no frontend"""
+    try:
+        stock = BranchStock.objects.get(
+            branch_id=branch_pk,
+            medication_id=medication_pk
+        )
+        return JsonResponse({
+            'success': True,
+            'quantity': stock.quantity,
+            'reserved_quantity': stock.reserved_quantity,
+            'available_quantity': stock.available_quantity,
+            'last_updated': stock.last_updated.isoformat()
+        })
+    except BranchStock.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'available_quantity': 0,
+            'error': 'Estoque não encontrado'
+        })
+
+
+@login_required
+def api_get_available_stock(request):
+    """API para buscar estoque disponível de um medicamento em uma filial"""
+    branch_id = request.GET.get('branch_id')
+    medication_id = request.GET.get('medication_id')
+    
+    if not branch_id or not medication_id:
+        return JsonResponse({
+            'success': False,
+            'available_quantity': 0,
+            'error': 'Parâmetros branch_id e medication_id são obrigatórios'
+        }, status=400)
+    
+    try:
+        stock = BranchStock.objects.get(
+            branch_id=branch_id,
+            medication_id=medication_id
+        )
+        return JsonResponse({
+            'success': True,
+            'quantity': stock.quantity,
+            'reserved_quantity': stock.reserved_quantity,
+            'available_quantity': stock.available_quantity,
+            'is_low_stock': stock.is_low_stock
+        })
+    except BranchStock.DoesNotExist:
+        return JsonResponse({
+            'success': True,
+            'quantity': 0,
+            'reserved_quantity': 0,
+            'available_quantity': 0,
+            'is_low_stock': False
+        })
+
+
+@login_required
+def api_branch_stats(request, branch_pk):
+    """API para buscar estatísticas atualizadas de uma filial"""
+    branch = get_object_or_404(Branch, pk=branch_pk)
+    
+    # Calcular diretamente do banco para garantir sincronização
+    branch_stocks = BranchStock.objects.filter(branch=branch)
+    total_medications = branch_stocks.values('medication').distinct().count()
+    total_stock_quantity = branch_stocks.aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # Calcular estoque baixo
+    low_stock_count = 0
+    for stock in branch_stocks.select_related('medication'):
+        if stock.available_quantity <= stock.medication.minimum_stock:
+            low_stock_count += 1
+    
+    return JsonResponse({
+        'success': True,
+        'total_medications': total_medications,
+        'total_stock_quantity': total_stock_quantity,
+        'low_stock_count': low_stock_count
+    })
 
 
 @admin_required
 def approve_transfer(request, pk):
-    """Aprovar e processar transferência"""
+    """Aprovar e processar transferência com transação atômica e prevenção de duplicidade"""
+    from django.db import transaction
+    from django.db.models import F
+    
     transfer = get_object_or_404(StockTransfer, pk=pk)
     
-    if request.method == 'POST' and transfer.status == 'pending':
+    if request.method == 'POST':
+        # Verificar se já foi processada (prevenir duplicidade)
+        if transfer.status != 'pending':
+            messages.warning(request, f'Esta transferência já foi {transfer.get_status_display().lower()}.')
+            return redirect('branches:transfer_detail', pk=pk)
+        
         try:
-            # Obter estoques
-            from_stock = BranchStock.objects.get(
-                branch=transfer.from_branch,
-                medication=transfer.medication
-            )
-            to_stock, created = BranchStock.objects.get_or_create(
-                branch=transfer.to_branch,
-                medication=transfer.medication,
-                defaults={'quantity': 0}
-            )
-            
-            # Processar transferência
-            from_stock.quantity -= transfer.quantity
-            from_stock.reserved_quantity -= transfer.quantity
-            from_stock.save()
-            
-            to_stock.quantity += transfer.quantity
-            to_stock.save()
-            
-            # Atualizar status da transferência
-            transfer.status = 'completed'
-            transfer.approved_by = request.user
-            transfer.completed_at = timezone.now()
-            transfer.save()
+            with transaction.atomic():
+                # Usar select_for_update para lock e prevenir condições de corrida
+                transfer = StockTransfer.objects.select_for_update().get(pk=pk)
+                
+                # Verificar novamente o status após lock
+                if transfer.status != 'pending':
+                    messages.warning(request, f'Esta transferência já foi processada.')
+                    return redirect('branches:transfer_detail', pk=pk)
+                
+                # Obter estoques com lock
+                from_stock = BranchStock.objects.select_for_update().get(
+                    branch=transfer.from_branch,
+                    medication=transfer.medication
+                )
+                
+                # Verificar se há estoque suficiente (incluindo reservado)
+                if from_stock.quantity < transfer.quantity:
+                    messages.error(
+                        request,
+                        f'Estoque insuficiente na filial de origem. Disponível: {from_stock.quantity} unidades'
+                    )
+                    return redirect('branches:transfer_detail', pk=pk)
+                
+                if from_stock.reserved_quantity < transfer.quantity:
+                    messages.error(
+                        request,
+                        f'Quantidade reservada insuficiente. Reservado: {from_stock.reserved_quantity} unidades'
+                    )
+                    return redirect('branches:transfer_detail', pk=pk)
+                
+                # Obter ou criar estoque de destino (com lock se existir)
+                to_stock, created = BranchStock.objects.get_or_create(
+                    branch=transfer.to_branch,
+                    medication=transfer.medication,
+                    defaults={'quantity': 0, 'reserved_quantity': 0}
+                )
+                
+                # Se não foi criado, fazer lock
+                if not created:
+                    to_stock = BranchStock.objects.select_for_update().get(
+                        branch=transfer.to_branch,
+                        medication=transfer.medication
+                    )
+                
+                # Processar transferência usando update() para operações atômicas
+                BranchStock.objects.filter(pk=from_stock.pk).update(
+                    quantity=F('quantity') - transfer.quantity,
+                    reserved_quantity=F('reserved_quantity') - transfer.quantity
+                )
+                
+                BranchStock.objects.filter(pk=to_stock.pk).update(
+                    quantity=F('quantity') + transfer.quantity
+                )
+                
+                # Atualizar status da transferência
+                transfer.status = 'completed'
+                transfer.approved_by = request.user
+                transfer.completed_at = timezone.now()
+                transfer.save(update_fields=['status', 'approved_by', 'completed_at'])
             
             messages.success(request, 'Transferência aprovada e processada com sucesso!')
             
+        except BranchStock.DoesNotExist:
+            messages.error(request, 'Estoque não encontrado na filial de origem.')
         except Exception as e:
             messages.error(request, f'Erro ao processar transferência: {str(e)}')
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Erro ao processar transferência {pk}: {str(e)}', exc_info=True)
     
     return redirect('branches:transfer_detail', pk=pk)
 
@@ -344,6 +554,8 @@ def approve_transfer(request, pk):
 @login_required
 def branch_dashboard(request):
     """Dashboard geral de filiais"""
+    from django.http import HttpResponse
+    
     branches = Branch.objects.filter(is_active=True)
     
     # Estatísticas gerais
@@ -371,4 +583,6 @@ def branch_dashboard(request):
         'pending_transfers': pending_transfers
     }
     
-    return render(request, 'branches/dashboard.html', context)
+    response = render(request, 'branches/dashboard.html', context)
+    response['Content-Type'] = 'text/html; charset=utf-8'
+    return response

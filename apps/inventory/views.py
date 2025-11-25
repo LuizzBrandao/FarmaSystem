@@ -2,6 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db.models import Q
 from .models import Medication, Category, Stock, StockMovement, Alert
 from apps.suppliers.models import Supplier
 from apps.authentication.decorators import role_required, admin_required, farmaceutico_required
@@ -10,8 +11,18 @@ from apps.authentication.decorators import role_required, admin_required, farmac
 @login_required
 def medication_list(request):
     """Lista de medicamentos"""
+    search_query = request.GET.get('search', '').strip()
     medications = Medication.objects.filter(is_active=True).select_related('category', 'supplier')
-    context = {'medications': medications}
+    if search_query:
+        medications = medications.filter(
+            Q(name__icontains=search_query) |
+            Q(category__name__icontains=search_query) |
+            Q(barcode__icontains=search_query) |
+            Q(active_principle__icontains=search_query) |
+            Q(dosage__icontains=search_query) |
+            Q(supplier__name__icontains=search_query)
+        )
+    context = {'medications': medications, 'search_query': search_query}
     return render(request, 'inventory/medication_list.html', context)
 
 
@@ -144,7 +155,6 @@ def stock_entry(request):
             stock = Stock.objects.create(
                 medication_id=request.POST.get('medication'),
                 quantity=int(request.POST.get('quantity')),
-                batch_number=request.POST.get('batch_number'),
                 expiry_date=request.POST.get('expiry_date'),
                 purchase_price=request.POST.get('purchase_price', 0),
                 selling_price=request.POST.get('selling_price', 0),
@@ -156,12 +166,11 @@ def stock_entry(request):
                 medication=stock.medication,
                 movement_type='entrada',
                 quantity=stock.quantity,
-                reference_number=stock.batch_number,
-                notes=f'Entrada de estoque - Lote {stock.batch_number}',
+                notes=f'Entrada de estoque - {stock.medication.name}',
                 user=request.user
             )
             
-            messages.success(request, f'Entrada de estoque registrada com sucesso! Lote: {stock.batch_number}')
+            messages.success(request, f'Entrada de estoque registrada com sucesso!')
             return redirect('inventory:stock_detail', pk=stock.pk)
         except Exception as e:
             messages.error(request, f'Erro ao registrar entrada: {str(e)}')

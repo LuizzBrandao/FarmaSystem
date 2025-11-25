@@ -31,7 +31,10 @@
         <div class="card-header">
             <h3>Lista de Medicamentos</h3>
             <div class="search-filters">
-                <input type="text" placeholder="Buscar medicamentos..." class="form-control" data-search-target=".medication-item">
+                <form action="{% url 'inventory:medication_list' %}" method="get" class="search-inline-form">
+                    <input type="text" name="search" placeholder="Buscar medicamentos..." class="form-control" value="{{ search_query|default:'' }}">
+                    <button type="submit" class="btn btn-outline"><i class="fas fa-search"></i> Buscar</button>
+                </form>
             </div>
         </div>
         

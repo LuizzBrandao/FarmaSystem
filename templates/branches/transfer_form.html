@@ -75,12 +75,20 @@
                     </div>
                 </div>
             </div>
-            
+
+            <div class="form-group">
+                <label class="checkbox-inline">
+                    <input type="checkbox" id="transfer_all" name="transfer_all">
+                    Transferir todos os medicamentos da filial de origem
+                </label>
+                <small class="form-help">Ao marcar, todos os medicamentos com quantidade disponível serão transferidos para a filial de destino. Os campos de medicamento e quantidade serão ignorados.</small>
+            </div>
+
             <div class="form-group">
                 <label for="reason">Motivo da Transferência:</label>
                 <textarea id="reason" name="reason" class="form-control" rows="4" required placeholder="Descreva o motivo desta transferência..."></textarea>
             </div>
-            
+
             <div class="form-actions">
                 <a href="{% url 'branches:dashboard' %}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i>
@@ -299,32 +307,106 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Aqui você faria uma requisição AJAX para buscar o estoque
-        // Por enquanto, vamos simular
+        // Fazer requisição AJAX para buscar o estoque real
         availableStockDiv.innerHTML = `
             <span class="stock-value">Carregando...</span>
             <small>Verificando estoque</small>
         `;
         
-        // Simular requisição
-        setTimeout(() => {
-            const mockStock = Math.floor(Math.random() * 100) + 10;
-            const stockClass = mockStock < 20 ? 'low-stock' : '';
-            
-            availableStockDiv.className = `stock-info ${stockClass}`;
-            availableStockDiv.innerHTML = `
-                <span class="stock-value">${mockStock}</span>
-                <small>unidades disponíveis</small>
-            `;
-            
-            // Definir máximo para o input de quantidade
-            quantityInput.max = mockStock;
-        }, 1000);
+        // Requisição AJAX real para buscar estoque disponível
+        fetch(`{% url 'branches:api_get_available_stock' %}?branch_id=${fromBranchId}&medication_id=${medicationId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success !== false) {
+                    const available = data.available_quantity || 0;
+                    const total = data.quantity || 0;
+                    const reserved = data.reserved_quantity || 0;
+                    
+                    let stockClass = '';
+                    if (available === 0) {
+                        stockClass = 'no-stock';
+                    } else if (available < 20 || data.is_low_stock) {
+                        stockClass = 'low-stock';
+                    }
+                    
+                    availableStockDiv.className = `stock-info ${stockClass}`;
+                    availableStockDiv.innerHTML = `
+                        <span class="stock-value">${available}</span>
+                        <small>unidades disponíveis</small>
+                        ${reserved > 0 ? `<small style="color: var(--warning-color);">(${reserved} reservadas)</small>` : ''}
+                    `;
+                    
+                    // Definir máximo para o input de quantidade baseado no estoque REAL
+                    quantityInput.max = available;
+                    quantityInput.setAttribute('data-max-stock', available);
+                    
+                    // Se a quantidade digitada for maior que o disponível, ajustar
+                    if (parseInt(quantityInput.value) > available) {
+                        quantityInput.value = available > 0 ? available : '';
+                        if (available === 0) {
+                            quantityInput.setCustomValidity('Não há estoque disponível para transferir');
+                        } else {
+                            quantityInput.setCustomValidity(`Quantidade máxima disponível: ${available}`);
+                        }
+                    } else {
+                        quantityInput.setCustomValidity('');
+                    }
+                } else {
+                    availableStockDiv.className = 'stock-info no-stock';
+                    availableStockDiv.innerHTML = `
+                        <span class="stock-value">0</span>
+                        <small>Erro ao carregar estoque</small>
+                    `;
+                    quantityInput.max = 0;
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao buscar estoque:', error);
+                availableStockDiv.className = 'stock-info no-stock';
+                availableStockDiv.innerHTML = `
+                    <span class="stock-value">-</span>
+                    <small>Erro ao carregar estoque</small>
+                `;
+            });
     }
     
     // Event listeners
     fromBranchSelect.addEventListener('change', updateAvailableStock);
     medicationSelect.addEventListener('change', updateAvailableStock);
+    
+    // Validar quantidade em tempo real
+    quantityInput.addEventListener('input', function() {
+        const maxStock = parseInt(this.getAttribute('data-max-stock') || this.max || 0);
+        const enteredValue = parseInt(this.value) || 0;
+        
+        if (enteredValue > maxStock) {
+            this.setCustomValidity(`Quantidade máxima disponível: ${maxStock} unidades`);
+        } else if (enteredValue <= 0) {
+            this.setCustomValidity('Quantidade deve ser maior que zero');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+    
+    // Validar antes de submeter o formulário
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const maxStock = parseInt(quantityInput.getAttribute('data-max-stock') || quantityInput.max || 0);
+        const enteredValue = parseInt(quantityInput.value) || 0;
+        
+        if (enteredValue > maxStock) {
+            e.preventDefault();
+            alert(`Erro: A quantidade solicitada (${enteredValue}) é maior que o estoque disponível (${maxStock} unidades).`);
+            quantityInput.focus();
+            return false;
+        }
+        
+        if (enteredValue <= 0) {
+            e.preventDefault();
+            alert('Erro: A quantidade deve ser maior que zero.');
+            quantityInput.focus();
+            return false;
+        }
+    });
     
     // Validar que filiais são diferentes
     document.getElementById('to_branch').addEventListener('change', function() {
@@ -351,5 +433,22 @@ document.addEventListener('DOMContentLoaded', function() {
         updateAvailableStock();
     }
 });
+</script>
+(function() {
+  const transferAllCheckbox = document.getElementById('transfer_all');
+  const medicationSelect = document.getElementById('medication');
+  const quantityInput = document.getElementById('quantity');
+
+  function toggleFields() {
+    const all = transferAllCheckbox.checked;
+    medicationSelect.disabled = all;
+    quantityInput.disabled = all;
+    medicationSelect.required = !all;
+    quantityInput.required = !all;
+  }
+
+  transferAllCheckbox.addEventListener('change', toggleFields);
+  toggleFields();
+})();
 </script>
 {% endblock %}

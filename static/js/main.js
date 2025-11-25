@@ -16,7 +16,7 @@ function initializeApp() {
     initModals();
     initAlerts();
     initSearch();
-    initNotificationsSystem();
+    // initNotificationsSystem();
     initTooltips();
     initProgressBars();
     initRippleEffect();
@@ -1198,6 +1198,7 @@ window.PharmacySystem = {
     formatCurrency,
     formatDate,
     fetchAPI,
+    getCsrfToken,
     // Novas funções
     addLoadingState,
     removeLoadingState,
