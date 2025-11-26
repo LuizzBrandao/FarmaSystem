@@ -252,3 +252,34 @@ INFO 2025-11-24 22:49:00,294 pdf_generator 11932 7440 PDFGenerator inicializado 
 INFO 2025-11-24 22:49:10,994 pdf_generator 22904 9192 PDFGenerator inicializado com engine: reportlab
 INFO 2025-11-24 22:49:13,233 pdf_generator 2680 8812 PDFGenerator inicializado com engine: reportlab
 INFO 2025-11-24 22:50:08,539 pdf_generator 25204 24512 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 15:25:56,980 pdf_generator 9944 8972 PDFGenerator inicializado com engine: None
+INFO 2025-11-26 15:27:14,197 pdf_generator 13412 7624 PDFGenerator inicializado com engine: None
+INFO 2025-11-26 15:28:01,186 pdf_generator 15664 12472 PDFGenerator inicializado com engine: None
+INFO 2025-11-26 15:31:10,237 pdf_generator 10244 14356 PDFGenerator inicializado com engine: None
+INFO 2025-11-26 15:33:24,813 pdf_generator 10244 428 Iniciando geração do relatório de movimentações
+ERROR 2025-11-26 15:33:24,815 pdf_generator 10244 428 Erro na geração do PDF de movimentações: Nenhuma biblioteca PDF disponível
+Traceback (most recent call last):
+  File "C:\Users\rafae\OneDrive\Área de Trabalho\FarmaSystem-main\apps\reports\pdf_generator.py", line 118, in generate_movements_report_pdf
+    raise PDFGenerationError("Nenhuma biblioteca PDF disponível")
+apps.reports.pdf_generator.PDFGenerationError: Nenhuma biblioteca PDF disponível
+WARNING 2025-11-26 15:33:24,822 pdf_generator 10244 428 Gerando PDF de erro para: Relatório de Movimentações
+CRITICAL 2025-11-26 15:33:24,824 pdf_generator 10244 428 Falha catastrófica na geração de PDF de erro: No module named 'reportlab'
+INFO 2025-11-26 15:34:01,993 pdf_generator 22012 6956 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 15:34:50,031 pdf_generator 22012 6816 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-26 15:34:50,035 pdf_generator 22012 6816 Buscando movimentações de 2025-10-27 18:34:50.035115+00:00 até 2025-11-26 18:34:50.035115+00:00
+DEBUG 2025-11-26 15:34:50,058 pdf_generator 22012 6816 Movimentações coletadas: 12 registros
+INFO 2025-11-26 16:26:46,938 pdf_generator 24028 24132 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:29:46,274 pdf_generator 19576 15132 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:30:13,185 pdf_generator 23100 23900 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:30:21,600 pdf_generator 15108 7924 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:38:36,289 pdf_generator 15108 23632 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-26 16:38:36,292 pdf_generator 15108 23632 Buscando movimentações de 2025-10-27 19:38:36.291968+00:00 até 2025-11-26 19:38:36.291968+00:00
+DEBUG 2025-11-26 16:38:36,300 pdf_generator 15108 23632 Movimentações coletadas: 14 registros
+INFO 2025-11-26 16:43:20,326 pdf_generator 15108 9820 Iniciando geração do relatório de movimentações
+DEBUG 2025-11-26 16:43:20,328 pdf_generator 15108 9820 Buscando movimentações de 2025-10-27 19:43:20.328229+00:00 até 2025-11-26 19:43:20.328229+00:00
+DEBUG 2025-11-26 16:43:20,334 pdf_generator 15108 9820 Movimentações coletadas: 15 registros
+INFO 2025-11-26 16:46:31,763 pdf_generator 17272 2708 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:46:45,772 pdf_generator 22412 296 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:46:56,137 pdf_generator 16980 24328 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:53:45,532 pdf_generator 28048 28016 PDFGenerator inicializado com engine: reportlab
+INFO 2025-11-26 16:54:25,587 pdf_generator 27848 27704 PDFGenerator inicializado com engine: reportlab

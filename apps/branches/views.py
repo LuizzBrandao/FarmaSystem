@@ -99,6 +99,13 @@ def branch_stock_view(request, branch_pk):
         elif expiry_status == 'normal':
             stocks_list = [stock for stock in stocks_list if stock.expiry_status == 'normal']
     
+    # Buscar todos os medicamentos ativos para o modal de adicionar
+    # A view update_branch_stock usa get_or_create, então pode adicionar mesmo medicamentos que já existem
+    all_medications = Medication.objects.filter(is_active=True).order_by('name')
+    
+    # Identificar quais medicamentos já estão na filial (para mostrar no template)
+    existing_medication_ids = [stock.medication_id for stock in stocks_list]
+    
     context = {
         'branch': branch,
         'stocks': stocks_list,
@@ -107,6 +114,8 @@ def branch_stock_view(request, branch_pk):
         'selected_category': category,
         'low_stock_only': low_stock_only,
         'expiry_status': expiry_status,
+        'all_medications': all_medications,
+        'existing_medication_ids': existing_medication_ids,
         'expiry_status_choices': [
             ('', 'Todos os status'),
             ('normal', 'Normal'),
@@ -179,10 +188,17 @@ def update_branch_stock(request, branch_pk, medication_pk):
                     branch, medication, new_quantity
                 )
             
-            messages.success(
-                request,
-                f'Estoque atualizado: {medication.name} de {old_quantity} para {new_quantity} unidades'
-            )
+            # Mensagem diferente se foi criado novo ou atualizado existente
+            if created:
+                messages.success(
+                    request,
+                    f'Medicamento {medication.name} adicionado à filial com {new_quantity} unidades!'
+                )
+            else:
+                messages.success(
+                    request,
+                    f'Estoque atualizado: {medication.name} de {old_quantity} para {new_quantity} unidades'
+                )
             
         except ValueError:
             messages.error(request, 'Quantidade deve ser um número válido')
@@ -261,78 +277,127 @@ def create_transfer(request):
                 messages.success(request, f'Solicitação criada: {created_count} transferências para todos os medicamentos disponíveis.')
                 return redirect('branches:dashboard')
 
-            # Fluxo de transferência individual (existente)
-            medication_id = request.POST.get('medication')
-            quantity = int(request.POST.get('quantity'))
-
-            medication = get_object_or_404(Medication, pk=medication_id)
-
-            with transaction.atomic():
-                # Verificar se há estoque suficiente na filial de origem (com lock)
-                try:
-                    from_stock = BranchStock.objects.select_for_update().get(
-                        branch=from_branch, 
-                        medication=medication
-                    )
-                    
-                    # Recalcular available_quantity após lock para garantir dados atualizados
-                    available_qty = max(0, from_stock.quantity - from_stock.reserved_quantity)
-                    
-                    if available_qty < quantity:
-                        messages.error(
-                            request,
-                            f'Estoque insuficiente. Disponível: {available_qty} unidades (Total: {from_stock.quantity}, Reservado: {from_stock.reserved_quantity})'
-                        )
-                        return redirect('branches:create_transfer')
-                    
-                    # Validação adicional: garantir que quantity não seja negativo após reserva
-                    if from_stock.reserved_quantity + quantity > from_stock.quantity:
-                        messages.error(
-                            request,
-                            f'Erro: A quantidade solicitada ({quantity}) excederia o estoque total ({from_stock.quantity}) após considerar as reservas existentes ({from_stock.reserved_quantity}).'
-                        )
-                        return redirect('branches:create_transfer')
-                        
-                except BranchStock.DoesNotExist:
-                    messages.error(request, 'Medicamento não encontrado na filial de origem')
-                    return redirect('branches:create_transfer')
-
-                # Verificar se já existe transferência pendente para evitar duplicidade
-                existing_transfer = StockTransfer.objects.filter(
-                    from_branch=from_branch,
-                    to_branch=to_branch,
-                    medication=medication,
-                    status='pending'
-                ).exists()
-                
-                if existing_transfer:
-                    messages.warning(
-                        request,
-                        'Já existe uma transferência pendente para este medicamento entre estas filiais.'
-                    )
-                    return redirect('branches:create_transfer')
-
-                # Criar transferência
-                transfer = StockTransfer.objects.create(
-                    from_branch=from_branch,
-                    to_branch=to_branch,
-                    medication=medication,
-                    quantity=quantity,
-                    reason=reason,
-                    requested_by=request.user
-                )
-
-                # Reservar estoque na filial de origem (usando update() para operação atômica)
-                BranchStock.objects.filter(pk=from_stock.pk).update(
-                    reserved_quantity=F('reserved_quantity') + quantity
-                )
-
-            # Enviar notificação
+            # Fluxo de transferência de múltiplos medicamentos
+            medication_ids = request.POST.getlist('medications[]')
+            quantities = request.POST.getlist('quantities[]')
+            
+            # Validar que há medicamentos
+            if not medication_ids or not quantities:
+                messages.error(request, 'Adicione pelo menos um medicamento para transferir.')
+                return redirect('branches:create_transfer')
+            
+            # Validar que arrays têm o mesmo tamanho
+            if len(medication_ids) != len(quantities):
+                messages.error(request, 'Erro: Número de medicamentos não corresponde ao número de quantidades.')
+                return redirect('branches:create_transfer')
+            
+            # Filtrar medicamentos vazios
+            valid_transfers = []
+            for med_id, qty_str in zip(medication_ids, quantities):
+                if med_id and qty_str:
+                    try:
+                        qty = int(qty_str)
+                        if qty > 0:
+                            valid_transfers.append((med_id, qty))
+                    except ValueError:
+                        continue
+            
+            if not valid_transfers:
+                messages.error(request, 'Adicione pelo menos um medicamento válido com quantidade maior que zero.')
+                return redirect('branches:create_transfer')
+            
+            # Processar múltiplas transferências
             notification_manager = NotificationManager()
-            notification_manager.send_transfer_notification(transfer)
+            created_transfers = []
+            errors = []
+            
+            with transaction.atomic():
+                for medication_id, quantity in valid_transfers:
+                    try:
+                        medication = get_object_or_404(Medication, pk=medication_id)
+                        
+                        # Verificar se há estoque suficiente na filial de origem (com lock)
+                        try:
+                            from_stock = BranchStock.objects.select_for_update().get(
+                                branch=from_branch, 
+                                medication=medication
+                            )
+                            
+                            # Recalcular available_quantity após lock para garantir dados atualizados
+                            available_qty = max(0, from_stock.quantity - from_stock.reserved_quantity)
+                            
+                            if available_qty < quantity:
+                                errors.append(
+                                    f'{medication.name}: Estoque insuficiente. Disponível: {available_qty} unidades'
+                                )
+                                continue
+                            
+                            # Validação adicional: garantir que quantity não seja negativo após reserva
+                            if from_stock.reserved_quantity + quantity > from_stock.quantity:
+                                errors.append(
+                                    f'{medication.name}: Quantidade solicitada ({quantity}) excederia o estoque total ({from_stock.quantity}) após considerar as reservas existentes ({from_stock.reserved_quantity}).'
+                                )
+                                continue
+                                
+                        except BranchStock.DoesNotExist:
+                            errors.append(f'{medication.name}: Medicamento não encontrado na filial de origem')
+                            continue
 
-            messages.success(request, 'Solicitação de transferência criada com sucesso!')
-            return redirect('branches:transfer_detail', pk=transfer.pk)
+                        # Verificar se já existe transferência pendente para evitar duplicidade
+                        existing_transfer = StockTransfer.objects.filter(
+                            from_branch=from_branch,
+                            to_branch=to_branch,
+                            medication=medication,
+                            status='pending'
+                        ).exists()
+                        
+                        if existing_transfer:
+                            errors.append(
+                                f'{medication.name}: Já existe uma transferência pendente para este medicamento entre estas filiais.'
+                            )
+                            continue
+
+                        # Criar transferência
+                        transfer = StockTransfer.objects.create(
+                            from_branch=from_branch,
+                            to_branch=to_branch,
+                            medication=medication,
+                            quantity=quantity,
+                            reason=reason,
+                            requested_by=request.user
+                        )
+
+                        # Reservar estoque na filial de origem (usando update() para operação atômica)
+                        BranchStock.objects.filter(pk=from_stock.pk).update(
+                            reserved_quantity=F('reserved_quantity') + quantity
+                        )
+                        
+                        # Enviar notificação
+                        notification_manager.send_transfer_notification(transfer)
+                        created_transfers.append(transfer)
+                        
+                    except Exception as e:
+                        medication_name = medication.name if 'medication' in locals() else f'Medicamento ID {medication_id}'
+                        errors.append(f'Erro ao processar {medication_name}: {str(e)}')
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f'Erro ao criar transferência para {medication_id}: {str(e)}', exc_info=True)
+            
+            # Mensagens de resultado
+            if errors:
+                for error in errors:
+                    messages.warning(request, error)
+            
+            if created_transfers:
+                if len(created_transfers) == 1:
+                    messages.success(request, 'Solicitação de transferência criada com sucesso!')
+                    return redirect('branches:transfer_detail', pk=created_transfers[0].pk)
+                else:
+                    messages.success(request, f'{len(created_transfers)} solicitações de transferência criadas com sucesso!')
+                    return redirect('branches:dashboard')
+            else:
+                messages.error(request, 'Nenhuma transferência foi criada. Verifique os erros acima.')
+                return redirect('branches:create_transfer')
 
         except ValueError:
             messages.error(request, 'Dados inválidos fornecidos')

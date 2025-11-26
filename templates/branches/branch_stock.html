@@ -18,6 +18,10 @@
             Estoque - {{ branch.name }}
         </h1>
         <div class="header-actions">
+            <button class="btn btn-success" onclick="openAddMedicationModal()">
+                <i class="fas fa-plus"></i>
+                Adicionar Medicamento
+            </button>
             <a href="{% url 'branches:create_transfer' %}?from_branch={{ branch.pk }}" class="btn btn-primary">
                 <i class="fas fa-exchange-alt"></i>
                 Nova Transferência
@@ -184,6 +188,71 @@
                 </div>
             {% endif %}
         </div>
+    </div>
+</div>
+
+<!-- Modal para Adicionar Novo Medicamento -->
+<div class="modal" id="addMedicationModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-plus"></i> Adicionar Medicamento à Filial</h3>
+            <button class="modal-close" onclick="closeAddMedicationModal()">&times;</button>
+        </div>
+        {% if all_medications %}
+        <form id="addMedicationForm" method="post">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="medicationSelect">Selecione o Medicamento:</label>
+                    <select id="medicationSelect" name="medication" class="form-control" required>
+                        <option value="">Selecione um medicamento</option>
+                        {% for medication in all_medications %}
+                        <option value="{{ medication.pk }}" {% if medication.pk in existing_medication_ids %}data-exists="true"{% endif %}>
+                            {{ medication.name }} - {{ medication.dosage }}
+                            {% if medication.pk in existing_medication_ids %} (já na filial){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-help">
+                        Selecione um medicamento para adicionar ou atualizar o estoque na filial
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="initialQuantity">Quantidade Inicial:</label>
+                    <input type="number" id="initialQuantity" name="quantity" class="form-control" min="0" required>
+                    <small class="form-help">Quantidade inicial de estoque para este medicamento</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="addReason">Motivo da Adição:</label>
+                    <textarea id="addReason" name="reason" class="form-control" rows="3" placeholder="Descreva o motivo de adicionar este medicamento à filial..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddMedicationModal()">Cancelar</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-plus"></i>
+                    Adicionar Medicamento
+                </button>
+            </div>
+        </form>
+        {% else %}
+        <div class="modal-body">
+            <div class="empty-state" style="padding: 2rem; text-align: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: var(--warning-color); margin-bottom: 1rem;"></i>
+                <h4>Nenhum medicamento cadastrado</h4>
+                <p>Você precisa cadastrar medicamentos no sistema antes de adicioná-los à filial.</p>
+                <a href="{% url 'inventory:medication_list' %}" class="btn btn-primary" style="margin-top: 1rem;">
+                    <i class="fas fa-pills"></i>
+                    Ir para Medicamentos
+                </a>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeAddMedicationModal()">Fechar</button>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -514,6 +583,16 @@ function closeModal() {
     document.getElementById('updateStockModal').classList.remove('show');
 }
 
+function openAddMedicationModal() {
+    document.getElementById('addMedicationModal').classList.add('show');
+}
+
+function closeAddMedicationModal() {
+    document.getElementById('addMedicationModal').classList.remove('show');
+    // Limpar formulário
+    document.getElementById('addMedicationForm').reset();
+}
+
 // Atualizar action do form com o stock ID
 document.getElementById('updateStockForm').addEventListener('submit', function(e) {
     const stockId = document.getElementById('stockId').value;
@@ -524,6 +603,34 @@ document.getElementById('updateStockForm').addEventListener('submit', function(e
 document.getElementById('updateStockModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeModal();
+    }
+});
+
+// Configurar formulário de adicionar medicamento
+document.getElementById('addMedicationForm').addEventListener('submit', function(e) {
+    const medicationId = document.getElementById('medicationSelect').value;
+    const quantity = document.getElementById('initialQuantity').value;
+    
+    if (!medicationId) {
+        e.preventDefault();
+        alert('Por favor, selecione um medicamento.');
+        return false;
+    }
+    
+    if (!quantity || parseInt(quantity) < 0) {
+        e.preventDefault();
+        alert('Por favor, informe uma quantidade válida.');
+        return false;
+    }
+    
+    // Definir action do formulário
+    this.action = `{% url 'branches:update_stock' branch.pk 0 %}`.replace('0', medicationId);
+});
+
+// Fechar modal de adicionar ao clicar fora
+document.getElementById('addMedicationModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeAddMedicationModal();
     }
 });
 </script>

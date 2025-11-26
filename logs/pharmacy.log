@@ -17,3 +17,7 @@ ERROR 2025-11-14 14:46:26,198 services 1316 23104 Template não encontrado: trans
 ERROR 2025-11-24 22:52:07,215 services 25204 5200 Template não encontrado: transfer_request
 ERROR 2025-11-24 22:52:56,313 services 25204 10548 Template não encontrado: transfer_request
 ERROR 2025-11-24 22:53:32,931 services 25204 10548 Template não encontrado: transfer_request
+ERROR 2025-11-26 15:33:10,871 services 10244 15808 Template não encontrado: transfer_request
+ERROR 2025-11-26 16:38:17,704 services 15108 24276 Template não encontrado: transfer_request
+ERROR 2025-11-26 16:38:17,710 services 15108 24276 Template não encontrado: transfer_request
+ERROR 2025-11-26 16:39:23,442 services 15108 19816 Template não encontrado: transfer_request

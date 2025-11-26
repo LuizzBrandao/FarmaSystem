@@ -51,29 +51,16 @@
             </div>
             
             <div class="form-group">
-                <label for="medication">Medicamento:</label>
-                <select id="medication" name="medication" class="form-control" required>
-                    <option value="">Selecione o medicamento</option>
-                    {% for medication in medications %}
-                    <option value="{{ medication.pk }}">{{ medication.name }} - {{ medication.dosage }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="quantity">Quantidade:</label>
-                    <input type="number" id="quantity" name="quantity" class="form-control" min="1" required>
-                    <small class="form-help">Quantidade a ser transferida</small>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <label style="margin: 0;">Medicamentos:</label>
+                    <button type="button" id="add-medication-btn" class="btn btn-sm btn-success" style="padding: 0.5rem 1rem;">
+                        <i class="fas fa-plus"></i> Adicionar Medicamento
+                    </button>
                 </div>
-                
-                <div class="form-group">
-                    <label>Estoque Disponível:</label>
-                    <div id="available-stock" class="stock-info">
-                        <span class="stock-value">-</span>
-                        <small>Selecione filial e medicamento</small>
-                    </div>
+                <div id="medications-container">
+                    <!-- Linhas de medicamentos serão adicionadas aqui dinamicamente -->
                 </div>
+                <small class="form-help">Adicione um ou mais medicamentos para transferir</small>
             </div>
 
             <div class="form-group">
@@ -287,129 +274,226 @@
 }
 </style>
 
+<style>
+.medication-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: end;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    margin-bottom: 1rem;
+}
+
+.medication-row .form-group {
+    margin-bottom: 0;
+}
+
+.remove-medication-btn {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 0.75rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition-base);
+    height: fit-content;
+}
+
+.remove-medication-btn:hover {
+    background: #dc3545;
+}
+
+.btn-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+
+.btn-success {
+    background: var(--success-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.btn-success:hover {
+    background: #28a745;
+}
+
+@media (max-width: 768px) {
+    .medication-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .remove-medication-btn {
+        width: 100%;
+    }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const fromBranchSelect = document.getElementById('from_branch');
-    const medicationSelect = document.getElementById('medication');
-    const availableStockDiv = document.getElementById('available-stock');
-    const quantityInput = document.getElementById('quantity');
+    const toBranchSelect = document.getElementById('to_branch');
+    const medicationsContainer = document.getElementById('medications-container');
+    const addMedicationBtn = document.getElementById('add-medication-btn');
+    const transferAllCheckbox = document.getElementById('transfer_all');
+    let medicationRowCounter = 0;
     
-    // Função para atualizar estoque disponível
-    function updateAvailableStock() {
-        const fromBranchId = fromBranchSelect.value;
-        const medicationId = medicationSelect.value;
+    // Criar opções de medicamentos como string para reutilizar
+    const medicationOptions = `
+        {% for medication in medications %}
+        <option value="{{ medication.pk }}">{{ medication.name }} - {{ medication.dosage }}</option>
+        {% endfor %}
+    `;
+    
+    // Função para criar uma nova linha de medicamento
+    function createMedicationRow() {
+        const rowId = `medication-row-${medicationRowCounter++}`;
+        const row = document.createElement('div');
+        row.className = 'medication-row';
+        row.id = rowId;
         
-        if (!fromBranchId || !medicationId) {
-            availableStockDiv.innerHTML = `
-                <span class="stock-value">-</span>
-                <small>Selecione filial e medicamento</small>
-            `;
-            return;
-        }
-        
-        // Fazer requisição AJAX para buscar o estoque real
-        availableStockDiv.innerHTML = `
-            <span class="stock-value">Carregando...</span>
-            <small>Verificando estoque</small>
+        row.innerHTML = `
+            <div class="form-group">
+                <label>Medicamento:</label>
+                <select name="medications[]" class="form-control medication-select" required>
+                    <option value="">Selecione o medicamento</option>
+                    ${medicationOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Quantidade:</label>
+                <input type="number" name="quantities[]" class="form-control quantity-input" min="1" required>
+            </div>
+            <div class="form-group">
+                <label>Estoque Disponível:</label>
+                <div class="stock-info available-stock-display">
+                    <span class="stock-value">-</span>
+                    <small>Selecione medicamento</small>
+                </div>
+            </div>
+            <button type="button" class="remove-medication-btn" onclick="removeMedicationRow('${rowId}')">
+                <i class="fas fa-trash"></i>
+            </button>
         `;
         
-        // Requisição AJAX real para buscar estoque disponível
-        fetch(`{% url 'branches:api_get_available_stock' %}?branch_id=${fromBranchId}&medication_id=${medicationId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success !== false) {
-                    const available = data.available_quantity || 0;
-                    const total = data.quantity || 0;
-                    const reserved = data.reserved_quantity || 0;
-                    
-                    let stockClass = '';
-                    if (available === 0) {
-                        stockClass = 'no-stock';
-                    } else if (available < 20 || data.is_low_stock) {
-                        stockClass = 'low-stock';
-                    }
-                    
-                    availableStockDiv.className = `stock-info ${stockClass}`;
-                    availableStockDiv.innerHTML = `
-                        <span class="stock-value">${available}</span>
-                        <small>unidades disponíveis</small>
-                        ${reserved > 0 ? `<small style="color: var(--warning-color);">(${reserved} reservadas)</small>` : ''}
-                    `;
-                    
-                    // Definir máximo para o input de quantidade baseado no estoque REAL
-                    quantityInput.max = available;
-                    quantityInput.setAttribute('data-max-stock', available);
-                    
-                    // Se a quantidade digitada for maior que o disponível, ajustar
-                    if (parseInt(quantityInput.value) > available) {
-                        quantityInput.value = available > 0 ? available : '';
+        medicationsContainer.appendChild(row);
+        
+        // Adicionar event listeners para a nova linha
+        const medicationSelect = row.querySelector('.medication-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        const stockDisplay = row.querySelector('.available-stock-display');
+        
+        // Atualizar estoque quando medicamento ou filial mudar
+        function updateStockForRow() {
+            const fromBranchId = fromBranchSelect.value;
+            const medicationId = medicationSelect.value;
+            
+            if (!fromBranchId || !medicationId) {
+                stockDisplay.innerHTML = `
+                    <span class="stock-value">-</span>
+                    <small>Selecione filial e medicamento</small>
+                `;
+                stockDisplay.className = 'stock-info available-stock-display';
+                return;
+            }
+            
+            stockDisplay.innerHTML = `
+                <span class="stock-value">Carregando...</span>
+                <small>Verificando estoque</small>
+            `;
+            
+            fetch(`{% url 'branches:api_get_available_stock' %}?branch_id=${fromBranchId}&medication_id=${medicationId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success !== false) {
+                        const available = data.available_quantity || 0;
+                        const reserved = data.reserved_quantity || 0;
+                        
+                        let stockClass = '';
                         if (available === 0) {
-                            quantityInput.setCustomValidity('Não há estoque disponível para transferir');
-                        } else {
-                            quantityInput.setCustomValidity(`Quantidade máxima disponível: ${available}`);
+                            stockClass = 'no-stock';
+                        } else if (available < 20 || data.is_low_stock) {
+                            stockClass = 'low-stock';
                         }
+                        
+                        stockDisplay.className = `stock-info available-stock-display ${stockClass}`;
+                        stockDisplay.innerHTML = `
+                            <span class="stock-value">${available}</span>
+                            <small>unidades disponíveis</small>
+                            ${reserved > 0 ? `<small style="color: var(--warning-color);">(${reserved} reservadas)</small>` : ''}
+                        `;
+                        
+                        quantityInput.max = available;
+                        quantityInput.setAttribute('data-max-stock', available);
                     } else {
-                        quantityInput.setCustomValidity('');
+                        stockDisplay.className = 'stock-info available-stock-display no-stock';
+                        stockDisplay.innerHTML = `
+                            <span class="stock-value">0</span>
+                            <small>Erro ao carregar estoque</small>
+                        `;
+                        quantityInput.max = 0;
                     }
-                } else {
-                    availableStockDiv.className = 'stock-info no-stock';
-                    availableStockDiv.innerHTML = `
-                        <span class="stock-value">0</span>
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar estoque:', error);
+                    stockDisplay.className = 'stock-info available-stock-display no-stock';
+                    stockDisplay.innerHTML = `
+                        <span class="stock-value">-</span>
                         <small>Erro ao carregar estoque</small>
                     `;
-                    quantityInput.max = 0;
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao buscar estoque:', error);
-                availableStockDiv.className = 'stock-info no-stock';
-                availableStockDiv.innerHTML = `
-                    <span class="stock-value">-</span>
-                    <small>Erro ao carregar estoque</small>
-                `;
-            });
+                });
+        }
+        
+        medicationSelect.addEventListener('change', updateStockForRow);
+        fromBranchSelect.addEventListener('change', updateStockForRow);
+        
+        // Validar quantidade
+        quantityInput.addEventListener('input', function() {
+            const maxStock = parseInt(this.getAttribute('data-max-stock') || this.max || 0);
+            const enteredValue = parseInt(this.value) || 0;
+            
+            if (enteredValue > maxStock) {
+                this.setCustomValidity(`Quantidade máxima disponível: ${maxStock} unidades`);
+            } else if (enteredValue <= 0) {
+                this.setCustomValidity('Quantidade deve ser maior que zero');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+        
+        return row;
     }
     
-    // Event listeners
-    fromBranchSelect.addEventListener('change', updateAvailableStock);
-    medicationSelect.addEventListener('change', updateAvailableStock);
+    // Função para remover linha de medicamento
+    window.removeMedicationRow = function(rowId) {
+        const row = document.getElementById(rowId);
+        if (row) {
+            row.remove();
+        }
+        
+        // Se não houver mais linhas, adicionar uma nova
+        if (medicationsContainer.children.length === 0) {
+            createMedicationRow();
+        }
+    };
     
-    // Validar quantidade em tempo real
-    quantityInput.addEventListener('input', function() {
-        const maxStock = parseInt(this.getAttribute('data-max-stock') || this.max || 0);
-        const enteredValue = parseInt(this.value) || 0;
-        
-        if (enteredValue > maxStock) {
-            this.setCustomValidity(`Quantidade máxima disponível: ${maxStock} unidades`);
-        } else if (enteredValue <= 0) {
-            this.setCustomValidity('Quantidade deve ser maior que zero');
-        } else {
-            this.setCustomValidity('');
-        }
-    });
+    // Adicionar primeira linha ao carregar
+    createMedicationRow();
     
-    // Validar antes de submeter o formulário
-    document.querySelector('form').addEventListener('submit', function(e) {
-        const maxStock = parseInt(quantityInput.getAttribute('data-max-stock') || quantityInput.max || 0);
-        const enteredValue = parseInt(quantityInput.value) || 0;
-        
-        if (enteredValue > maxStock) {
-            e.preventDefault();
-            alert(`Erro: A quantidade solicitada (${enteredValue}) é maior que o estoque disponível (${maxStock} unidades).`);
-            quantityInput.focus();
-            return false;
-        }
-        
-        if (enteredValue <= 0) {
-            e.preventDefault();
-            alert('Erro: A quantidade deve ser maior que zero.');
-            quantityInput.focus();
-            return false;
-        }
+    // Botão para adicionar mais medicamentos
+    addMedicationBtn.addEventListener('click', function() {
+        createMedicationRow();
     });
     
     // Validar que filiais são diferentes
-    document.getElementById('to_branch').addEventListener('change', function() {
+    toBranchSelect.addEventListener('change', function() {
         if (this.value === fromBranchSelect.value) {
             alert('A filial de destino deve ser diferente da filial de origem.');
             this.value = '';
@@ -417,11 +501,78 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     fromBranchSelect.addEventListener('change', function() {
-        const toBranchSelect = document.getElementById('to_branch');
         if (this.value === toBranchSelect.value) {
             toBranchSelect.value = '';
         }
+        // Atualizar estoques de todas as linhas
+        document.querySelectorAll('.medication-select').forEach(select => {
+            if (select.value) {
+                select.dispatchEvent(new Event('change'));
+            }
+        });
     });
+    
+    // Validar formulário antes de submeter
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const medicationRows = document.querySelectorAll('.medication-row');
+        
+        if (medicationRows.length === 0) {
+            e.preventDefault();
+            alert('Adicione pelo menos um medicamento para transferir.');
+            return false;
+        }
+        
+        // Validar cada linha
+        let hasErrors = false;
+        medicationRows.forEach(row => {
+            const medicationSelect = row.querySelector('.medication-select');
+            const quantityInput = row.querySelector('.quantity-input');
+            const maxStock = parseInt(quantityInput.getAttribute('data-max-stock') || quantityInput.max || 0);
+            const enteredValue = parseInt(quantityInput.value) || 0;
+            
+            if (!medicationSelect.value) {
+                hasErrors = true;
+                medicationSelect.focus();
+                return;
+            }
+            
+            if (enteredValue > maxStock) {
+                e.preventDefault();
+                alert(`Erro: A quantidade solicitada (${enteredValue}) é maior que o estoque disponível (${maxStock} unidades) para o medicamento selecionado.`);
+                quantityInput.focus();
+                hasErrors = true;
+                return;
+            }
+            
+            if (enteredValue <= 0) {
+                e.preventDefault();
+                alert('Erro: A quantidade deve ser maior que zero.');
+                quantityInput.focus();
+                hasErrors = true;
+                return;
+            }
+        });
+        
+        if (hasErrors) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // Toggle campos quando transfer_all é marcado
+    function toggleFields() {
+        const all = transferAllCheckbox.checked;
+        medicationsContainer.style.display = all ? 'none' : 'block';
+        addMedicationBtn.style.display = all ? 'none' : 'block';
+        
+        // Tornar campos obrigatórios ou não
+        document.querySelectorAll('.medication-select, .quantity-input').forEach(input => {
+            input.required = !all;
+        });
+    }
+    
+    transferAllCheckbox.addEventListener('change', toggleFields);
+    toggleFields();
     
     // Pre-popular campos se vieram da URL
     const urlParams = new URLSearchParams(window.location.search);
@@ -429,26 +580,12 @@ document.addEventListener('DOMContentLoaded', function() {
         fromBranchSelect.value = urlParams.get('from_branch');
     }
     if (urlParams.get('medication')) {
-        medicationSelect.value = urlParams.get('medication');
-        updateAvailableStock();
+        const firstSelect = document.querySelector('.medication-select');
+        if (firstSelect) {
+            firstSelect.value = urlParams.get('medication');
+            firstSelect.dispatchEvent(new Event('change'));
+        }
     }
 });
-</script>
-(function() {
-  const transferAllCheckbox = document.getElementById('transfer_all');
-  const medicationSelect = document.getElementById('medication');
-  const quantityInput = document.getElementById('quantity');
-
-  function toggleFields() {
-    const all = transferAllCheckbox.checked;
-    medicationSelect.disabled = all;
-    quantityInput.disabled = all;
-    medicationSelect.required = !all;
-    quantityInput.required = !all;
-  }
-
-  transferAllCheckbox.addEventListener('change', toggleFields);
-  toggleFields();
-})();
 </script>
 {% endblock %}
